@@ -29,20 +29,29 @@ const FolderHeader = ({ title, total, expanded, onToggle }: { title: string, tot
     </div>
 );
 
-const BudgetItem = ({ code, title, cost, details, onClick }: { code: string, title: string, cost: string, details: string, onClick?: () => void }) => (
-    <div onClick={onClick} className="group relative px-4 py-3.5 flex items-start gap-3 active:bg-blue-50 transition-colors cursor-pointer odd:bg-transparent even:bg-slate-50/50">
-        <div className="mt-0.5 flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-500 shrink-0">
-            <span className="text-[10px] font-bold">{code.split('.')[0]}</span>
+const BudgetItem = ({ code, title, cost, details, onClick, onDelete }: { code: string, title: string, cost: string, details: string, onClick?: () => void, onDelete?: () => void }) => (
+    <div onClick={onClick} className="group relative px-4 py-3.5 flex items-start gap-3 active:bg-blue-50 transition-colors cursor-pointer odd:bg-transparent even:bg-slate-50/50 hover:bg-gray-50">
+        <div className="mt-0.5 flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-500 shrink-0 font-mono text-xs font-bold group-hover:bg-white group-hover:shadow-sm transition-all">
+            {code.split('.')[0]}
         </div>
         <div className="flex-1 min-w-0">
             <div className="flex justify-between items-baseline mb-1">
-                <h3 className="text-sm font-semibold text-slate-800 truncate pr-2">{code} {title}</h3>
-                <span className="text-sm font-bold text-slate-900">{cost}</span>
+                <h3 className="text-sm font-semibold text-slate-800 truncate pr-2 group-hover:text-primary transition-colors">{code} {title}</h3>
+                <span className="text-sm font-bold text-slate-900 font-mono">{cost}</span>
             </div>
             <div className="flex justify-between items-center text-xs text-slate-500">
                 <span>{details}</span>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                    <button className="text-primary hover:text-blue-700"><span className="material-symbols-outlined text-base">edit</span></button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
+                        className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors"
+                        title="Eliminar Partida"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                    <button className="text-primary hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition-colors">
+                        <span className="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -59,7 +68,7 @@ const SummaryRow = ({ label, value }: { label: string, value: string }) => (
 // --- Main Component ---
 
 export const ListaPartidas = () => {
-    const { proyectoActual, agregarPartida, setPartidaEditando } = useProyectoStore();
+    const { proyectoActual, agregarPartida, setPartidaEditando, eliminarPartida } = useProyectoStore();
     const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
 
     // Grouping Logic
@@ -68,12 +77,13 @@ export const ListaPartidas = () => {
         const groups: Record<string, Partida[]> = {};
 
         proyectoActual.partidas.forEach(p => {
-            const folderCode = p.codigo.split('.')[0] || 'Unknown';
-            if (!groups[folderCode]) groups[folderCode] = [];
-            groups[folderCode].push(p);
+            // Use the new 'capitulo' field, fallback to 'General' if empty
+            const folderName = p.capitulo || 'General';
+            if (!groups[folderName]) groups[folderName] = [];
+            groups[folderName].push(p);
         });
         return groups;
-    }, [proyectoActual?.partidas]);
+    }, [proyectoActual]);
 
     const folderTotals = useMemo(() => {
         const totals: Record<string, number> = {};
@@ -107,6 +117,7 @@ export const ListaPartidas = () => {
             costoDirecto: 0,
             precioUnitario: 0,
             precioTotal: 0,
+            capitulo: 'General', // Default chapter
         };
         agregarPartida(nuevaPartida);
         setPartidaEditando(nuevaPartida.id); // Open immediately
@@ -159,6 +170,11 @@ export const ListaPartidas = () => {
                                         cost={fmt(partida.precioTotal)}
                                         details={`${partida.cantidad} ${partida.unidadMedida} × ${fmt(partida.precioUnitario)}`}
                                         onClick={() => setPartidaEditando(partida.id)}
+                                        onDelete={() => {
+                                            if (confirm('¿Estás seguro de eliminar esta partida?')) {
+                                                eliminarPartida(partida.id);
+                                            }
+                                        }}
                                     />
                                 ))}
                             </div>
@@ -167,8 +183,19 @@ export const ListaPartidas = () => {
                 ))}
 
                 {Object.keys(groupedPartidas).length === 0 && (
-                    <div className="p-8 text-center text-gray-400">
-                        No hay partidas. Pulsa "New Item".
+                    <div className="flex flex-col items-center justify-center h-full p-8 text-center text-gray-400 mt-10">
+                        <div className="bg-slate-50 p-6 rounded-full mb-4">
+                            <span className="material-symbols-outlined text-6xl text-slate-200">post_add</span>
+                        </div>
+                        <h3 className="text-lg font-semibold text-slate-700 mb-1">No hay partidas aún</h3>
+                        <p className="text-sm text-slate-500 max-w-xs mx-auto mb-6">Comienza agregando conceptos de obra a tu presupuesto.</p>
+                        <button
+                            onClick={handleNuevaPartida}
+                            className="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
+                        >
+                            <span className="material-symbols-outlined">add</span>
+                            Agregar Primera Partida
+                        </button>
                     </div>
                 )}
 

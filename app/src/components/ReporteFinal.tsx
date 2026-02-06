@@ -8,7 +8,12 @@ export const ReporteFinal = () => {
 
     const handleDownload = () => {
         if (proyectoActual) {
-            generarPDFPresupuesto(proyectoActual);
+            try {
+                generarPDFPresupuesto(proyectoActual);
+            } catch (error) {
+                console.error("Error generating PDF:", error);
+                alert("Hubo un error al generar el reporte. Por favor revisa que todos los datos del proyecto estén completos.");
+            }
         }
     };
 

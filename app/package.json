@@ -13,6 +13,7 @@
     "@capacitor/android": "^8.0.2",
     "@capacitor/cli": "^8.0.2",
     "@capacitor/core": "^8.0.2",
+    "axios": "^1.13.4",
     "clsx": "^2.1.1",
     "idb": "^8.0.3",
     "jspdf": "^4.1.0",

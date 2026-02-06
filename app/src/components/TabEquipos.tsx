@@ -1,6 +1,5 @@
 import { useProyectoStore } from '../store/useProyectoStore';
 import type { EquipoPartida } from '../types';
-import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
 
@@ -40,76 +39,80 @@ export const TabEquipos = ({ partidaId, equipos }: TabEquiposProps) => {
 
     return (
         <div className="space-y-4">
-            <div className="overflow-x-auto">
+            <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm bg-white">
                 <table className="w-full text-sm">
-                    <thead className="bg-gray-50 text-gray-700">
+                    <thead className="bg-gray-50/50 text-gray-700 border-b border-gray-200">
                         <tr>
-                            <th className="px-4 py-2 text-left">Equipo</th>
-                            <th className="px-4 py-2 text-left w-32">Tipo</th>
-                            <th className="px-4 py-2 text-right w-24">$/Hora</th>
-                            <th className="px-4 py-2 text-right w-24">Hrs/Día</th>
-                            <th className="px-4 py-2 text-right w-20">Cant.</th>
-                            <th className="px-4 py-2 text-right w-32">Subtotal</th>
-                            <th className="px-4 py-2 w-16"></th>
+                            <th className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider text-slate-500">Equipo</th>
+                            <th className="px-2 py-3 text-left w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Tipo</th>
+                            <th className="px-2 py-3 text-right w-24 font-semibold text-xs uppercase tracking-wider text-slate-500">$/Hora</th>
+                            <th className="px-2 py-3 text-right w-24 font-semibold text-xs uppercase tracking-wider text-slate-500">Hrs/Día</th>
+                            <th className="px-2 py-3 text-right w-20 font-semibold text-xs uppercase tracking-wider text-slate-500">Cant.</th>
+                            <th className="px-4 py-3 text-right w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Subtotal</th>
+                            <th className="px-2 py-3 w-12"></th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-gray-100">
                         {equipos.map((eq, idx) => (
-                            <tr key={eq.recursoId} className="group hover:bg-gray-50">
+                            <tr key={eq.recursoId} className="group hover:bg-blue-50/30 transition-colors">
                                 <td className="px-4 py-2">
                                     <input
-                                        className="w-full bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 rounded px-1"
+                                        className="w-full bg-transparent font-medium text-slate-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-md px-2 py-1.5 transition-all"
                                         value={eq.nombre}
                                         onChange={(e) => handleUpdate(idx, 'nombre', e.target.value)}
+                                        placeholder="Nombre del equipo"
                                     />
                                 </td>
-                                <td className="px-4 py-2">
+                                <td className="px-2 py-2">
                                     <Select
                                         options={[
-                                            { label: 'Maquinaria Pesada', value: 'MAQUINARIA_PESADA' },
+                                            { label: 'Maquinaria', value: 'MAQUINARIA_PESADA' },
                                             { label: 'Equipo Menor', value: 'EQUIPO_MENOR' },
                                         ]}
                                         value={eq.tipoEquipo}
                                         onChange={(e) => handleUpdate(idx, 'tipoEquipo', e.target.value)}
-                                        className="h-8 py-1"
+                                        className="h-9 py-1 text-xs bg-white border-transparent focus:border-primary/50 focus:ring-2 focus:ring-primary/20 shadow-sm"
                                     />
                                 </td>
-                                <td className="px-4 py-2">
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        className="text-right h-8"
-                                        value={eq.costoHora}
-                                        onChange={(e) => handleUpdate(idx, 'costoHora', Number(e.target.value))}
-                                    />
+                                <td className="px-2 py-2">
+                                    <div className="relative">
+                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className="w-full text-right bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-md pl-4 pr-1 py-1.5 font-mono text-slate-700 text-xs"
+                                            value={eq.costoHora}
+                                            onChange={(e) => handleUpdate(idx, 'costoHora', Number(e.target.value))}
+                                        />
+                                    </div>
                                 </td>
-                                <td className="px-4 py-2">
-                                    <Input
+                                <td className="px-2 py-2">
+                                    <input
                                         type="number"
                                         step="0.5"
-                                        className="text-right h-8"
+                                        className="w-full text-right bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-md px-1 py-1.5 font-mono text-slate-700 text-xs"
                                         value={eq.horasPorDia}
                                         onChange={(e) => handleUpdate(idx, 'horasPorDia', Number(e.target.value))}
                                     />
                                 </td>
-                                <td className="px-4 py-2">
-                                    <Input
+                                <td className="px-2 py-2">
+                                    <input
                                         type="number"
                                         step="1"
-                                        className="text-right h-8"
+                                        className="w-full text-right bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-md px-1 py-1.5 font-mono text-slate-700 text-xs"
                                         value={eq.cantidad}
                                         onChange={(e) => handleUpdate(idx, 'cantidad', Number(e.target.value))}
                                     />
                                 </td>
-                                <td className="px-4 py-2 text-right font-medium">
+                                <td className="px-4 py-2 text-right font-bold text-slate-900 font-mono">
                                     {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(eq.subtotal)}
                                 </td>
-                                <td className="px-4 py-2 text-center">
+                                <td className="px-2 py-2 text-center">
                                     <button
                                         onClick={() => eliminarEquipo(idx)}
-                                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="size-8 flex items-center justify-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
                                     >
-                                        🗑️
+                                        <span className="material-symbols-outlined text-[18px]">delete</span>
                                     </button>
                                 </td>
                             </tr>

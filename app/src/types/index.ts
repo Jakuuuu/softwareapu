@@ -1,5 +1,5 @@
 export type UnidadMedida = 'M2' | 'M3' | 'ML' | 'PZA' | 'PTO' | 'GLB' | 'KG' | 'TON';
-export type TipoObra = 'EDIFICACION' | 'VIALIDAD' | 'HOSPITAL' | 'SIERRA';
+export type TipoObra = 'EDIFICACION' | 'VIALIDAD' | 'HOSPITAL' | 'SIERRA' | 'OTRO';
 export type CategoriaObrero = 'MAESTRO' | 'OFICIAL' | 'AYUDANTE' | 'PEON';
 export type TipoEquipo = 'MAQUINARIA_PESADA' | 'HERRAMIENTA_MENOR' | 'EQUIPO_MENOR';
 export type TipoRecurso = 'MATERIAL' | 'MANO_OBRA' | 'EQUIPO';
@@ -10,6 +10,7 @@ export interface Proyecto {
     ubicacion: string;
     propietario: string;
     tipoObra: TipoObra;
+    tipoObraOtro?: string; // Para especificar cuando es OTRO
     factoresGlobales: {
         iva: number;           // Porcentaje: 16
         utilidad: number;      // Porcentaje: 12
@@ -22,7 +23,8 @@ export interface Proyecto {
 
 export interface Partida {
     id: string;
-    codigo: string;          // Ej: "03.02.01"
+    codigo: string;          // Ej: "01.01"
+    capitulo: string;        // Ej: "Estructuras", "Acabados" (Permite agrupación personalizada)
     titulo: string;
     subtitulo?: string;
     descripcion: string;
