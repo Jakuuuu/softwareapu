@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { calculateFCAS, ProjectConfig } from '../services/api';
+import { calculateFCAS, type ProjectConfig } from '../services/api';
 
 export const FCASCalculator = () => {
     const [result, setResult] = useState<number | null>(null);
