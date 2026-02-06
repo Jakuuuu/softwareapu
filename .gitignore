@@ -1,0 +1,30 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build
+dist
+dist-ssr
+build
+apk
+
+# OS
+.DS_Store
+Thumbs.db
+*.sw?
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Environment
+.env
+.env.local
