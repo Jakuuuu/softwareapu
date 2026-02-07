@@ -1,6 +1,12 @@
 import { useProyectoStore } from '../../store/useProyectoStore';
 
-export const Header = () => {
+interface HeaderProps {
+    onExportPDF?: () => void;
+    onExportJSON?: () => void;
+    onImportJSON?: () => void;
+}
+
+export const Header = ({ onExportPDF, onExportJSON, onImportJSON }: HeaderProps) => {
     const { proyectoActual } = useProyectoStore();
 
     return (
@@ -30,17 +36,30 @@ export const Header = () => {
                 <div className="h-6 w-px bg-slate-200 mx-2"></div>
 
                 <div className="flex gap-2">
-                    <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
-                        <span className="material-symbols-outlined text-xl">notifications</span>
+                    <button
+                        onClick={onImportJSON}
+                        className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg flex items-center gap-1"
+                        title="Importar Proyecto (JSON)"
+                    >
+                        <span className="material-symbols-outlined text-xl">upload_file</span>
                     </button>
-                    <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
-                        <span className="material-symbols-outlined text-xl">help</span>
+                    <button
+                        onClick={onExportJSON}
+                        className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg flex items-center gap-1"
+                        title="Guardar Respaldo (JSON)"
+                    >
+                        <span className="material-symbols-outlined text-xl">save</span>
                     </button>
                 </div>
 
-                <button className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                    <span className="material-symbols-outlined text-sm">cloud_upload</span>
-                    Exportar
+                <div className="h-6 w-px bg-slate-200 mx-2"></div>
+
+                <button
+                    onClick={onExportPDF}
+                    className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                    <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+                    Exportar PDF
                 </button>
             </div>
         </header>

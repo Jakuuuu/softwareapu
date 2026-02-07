@@ -15,7 +15,7 @@ type FormValues = {
 };
 
 export const ConfiguracionProyecto = () => {
-    const { setProyecto, proyectoActual } = useProyectoStore();
+    const { setProyecto, proyectoActual, setCurrentView } = useProyectoStore();
 
     const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormValues>({
         defaultValues: {
@@ -51,7 +51,7 @@ export const ConfiguracionProyecto = () => {
             partidas: proyectoActual?.partidas || [],
         };
         setProyecto(nuevoProyecto);
-        // Note: Navigation is handled by App.tsx observing proyectoActual
+        setCurrentView('presupuesto');
     };
 
     const workTypes: { id: TipoObra, label: string, icon: string }[] = [

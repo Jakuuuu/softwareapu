@@ -1,22 +1,24 @@
 import { useState } from 'react';
+import { useProyectoStore } from '../../store/useProyectoStore';
 
 interface SidebarItem {
     icon: string;
     label: string;
-    active?: boolean;
+    view: string;
 }
 
 const ITEMS: SidebarItem[] = [
-    { icon: 'dashboard', label: 'Dashboard' },
-    { icon: 'format_list_bulleted', label: 'Presupuesto', active: true },
-    { icon: 'inventory_2', label: 'Insumos' },
-    { icon: 'groups', label: 'Mano de Obra' },
-    { icon: 'agriculture', label: 'Equipos' },
-    { icon: 'settings', label: 'Configuración' },
+    { icon: 'dashboard', label: 'Dashboard', view: 'dashboard' },
+    { icon: 'format_list_bulleted', label: 'Presupuesto', view: 'presupuesto' },
+    { icon: 'inventory_2', label: 'Insumos', view: 'insumos' },
+    { icon: 'groups', label: 'Mano de Obra', view: 'mano_obra' },
+    { icon: 'agriculture', label: 'Equipos', view: 'equipos' },
+    { icon: 'settings', label: 'Configuración', view: 'configuracion' },
 ];
 
 export const Sidebar = () => {
     const [collapsed, setCollapsed] = useState(false);
+    const { currentView, setCurrentView } = useProyectoStore();
 
     return (
         <aside className={`bg-slate-900 text-white h-screen fixed left-0 top-0 transition-all duration-300 z-50 ${collapsed ? 'w-20' : 'w-64'}`}>
@@ -38,9 +40,10 @@ export const Sidebar = () => {
                 {ITEMS.map((item) => (
                     <button
                         key={item.label}
-                        className={`w-full flex items-center p-3 rounded-lg transition-colors duration-200 ${item.active
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                        onClick={() => setCurrentView(item.view)}
+                        className={`w-full flex items-center p-3 rounded-lg transition-colors duration-200 ${currentView === item.view
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                             }`}
                     >
                         <span className="material-symbols-outlined text-2xl">{item.icon}</span>
