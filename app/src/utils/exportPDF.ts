@@ -1,14 +1,19 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import type { Proyecto } from '../types';
 
-export const generarPDFPresupuesto = (proyecto: Proyecto) => {
+export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
     // 1. Initialize Document
     const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
     });
+
+
 
     // Helper for formatting currency
     const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format;
@@ -196,6 +201,31 @@ export const generarPDFPresupuesto = (proyecto: Proyecto) => {
     const filename = `Presupuesto_${(proyecto.nombre || 'Proyecto').replace(/\s+/g, '_')}.pdf`;
 
     try {
+        if (Capacitor.isNativePlatform()) {
+            const base64Data = doc.output('datauristring').split(',')[1];
+
+            try {
+                const savedFile = await Filesystem.writeFile({
+                    path: filename,
+                    data: base64Data,
+                    directory: Directory.Documents,
+                    recursive: true
+                });
+
+                await Share.share({
+                    title: 'Presupuesto de Obra',
+                    text: `Presupuesto del proyecto: ${proyecto.nombre}`,
+                    url: savedFile.uri,
+                    dialogTitle: 'Compartir Presupuesto',
+                });
+            } catch (e) {
+                console.error("Filesystem/Share error:", e);
+                // Fallback or alert if needed
+                alert("Error al compartir el archivo en dispositivo móvil.");
+            }
+            return;
+        }
+
         // Method 1: Standard save (Works on desktop/some mobiles)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof (window.navigator as any).msSaveBlob !== 'undefined') {
