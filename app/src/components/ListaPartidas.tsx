@@ -1,8 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useProyectoStore } from '../store/useProyectoStore';
 import type { Partida } from '../types';
-import { generarPDFPresupuesto } from '../utils/exportPDF';
-
 // --- Sub-components (Inline for valid single-file export) ---
 
 const ActionButton = ({ icon, label, active, onClick }: { icon: string, label: string, active?: boolean, onClick?: () => void }) => (
@@ -67,7 +65,7 @@ const SummaryRow = ({ label, value }: { label: string, value: string }) => (
 
 // --- Main Component ---
 
-export const ListaPartidas = () => {
+export const ListaPartidas = ({ onImport, onReport }: { onImport?: () => void, onReport?: () => void }) => {
     const { proyectoActual, agregarPartida, setPartidaEditando, eliminarPartida } = useProyectoStore();
     const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
 
@@ -107,7 +105,7 @@ export const ListaPartidas = () => {
             descripcion: '',
             unidadMedida: 'M2',
             cantidad: 1,
-            rendimiento: 0,
+            rendimiento: 1, // Defaulting to 1 to ensure Labor/Equipment costs calculate immediately
             materiales: [],
             manoObra: [],
             equipos: [],
@@ -145,8 +143,8 @@ export const ListaPartidas = () => {
                 </div>
                 <div className="grid grid-cols-3 gap-2 px-4 py-2">
                     <ActionButton icon="add" label="New Item" active onClick={handleNuevaPartida} />
-                    <ActionButton icon="download" label="Import" />
-                    <ActionButton icon="description" label="Report" onClick={() => generarPDFPresupuesto(proyectoActual)} />
+                    <ActionButton icon="download" label="Import" onClick={onImport} />
+                    <ActionButton icon="description" label="Report" onClick={onReport} />
                 </div>
             </header>
 

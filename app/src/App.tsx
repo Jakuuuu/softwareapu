@@ -75,7 +75,10 @@ function App() {
       case 'dashboard': // Fallback to budget for now
         return (
           <div className="max-w-6xl mx-auto space-y-6">
-            <ListaPartidas />
+            <ListaPartidas
+              onImport={() => fileInputRef.current?.click()}
+              onReport={handleExportPDF}
+            />
           </div>
         );
       case 'insumos':
@@ -87,7 +90,10 @@ function App() {
       case 'configuracion':
         return <div className="max-w-3xl mx-auto"><ConfiguracionProyecto /></div>;
       default:
-        return <ListaPartidas />;
+        return <ListaPartidas
+          onImport={() => fileInputRef.current?.click()}
+          onReport={handleExportPDF}
+        />;
     }
   };
 
