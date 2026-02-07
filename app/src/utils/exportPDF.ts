@@ -130,7 +130,14 @@ export const generarPDFPresupuesto = (proyecto: Proyecto) => {
     const granTotal = subtotal + ivaTotal;
 
     const summaryX = 110;
-    let sumY = finalY > 240 ? 20 : finalY;
+    const summaryHeight = 60; // Approximate height of the summary box
+
+    // Check if we need a new page for the summary
+    let sumY = finalY;
+    if (sumY + summaryHeight > 270) { // 270 is approx bottom margin considering footer
+        doc.addPage();
+        sumY = 20; // Reset Y for new page
+    }
 
     // Draw Summary Box
     doc.setDrawColor(200);
@@ -185,6 +192,40 @@ export const generarPDFPresupuesto = (proyecto: Proyecto) => {
         doc.text(`Generado el: ${now}`, 14, 285);
     }
 
-    // 8. SAVE
-    doc.save(`Presupuesto_${(proyecto.nombre || 'Proyecto').replace(/\s+/g, '_')}.pdf`);
+    // 8. SAVE (Mobile Compatible)
+    const filename = `Presupuesto_${(proyecto.nombre || 'Proyecto').replace(/\s+/g, '_')}.pdf`;
+
+    try {
+        // Method 1: Standard save (Works on desktop/some mobiles)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (typeof (window.navigator as any).msSaveBlob !== 'undefined') {
+            // IE/Edge legacy
+            doc.save(filename);
+            return;
+        }
+
+        // Method 2: Blob + Link (Robust for Mobile/WebView)
+        const blob = doc.output('blob');
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+
+        link.href = url;
+        link.download = filename;
+        link.target = '_blank'; // Required for some browsers to trigger download
+
+        document.body.appendChild(link);
+        link.click();
+
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        }, 100);
+
+    } catch (error) {
+        console.error("Download failed, trying fallback:", error);
+        // Fallback: Direct save attempt
+        doc.save(filename);
+        alert("Si la descarga no inicia, por favor revisa los permisos de tu navegador.");
+    }
 };

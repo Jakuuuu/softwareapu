@@ -1,4 +1,6 @@
+import { useState, useRef, useEffect } from 'react';
 import { useProyectoStore } from '../../store/useProyectoStore';
+
 
 interface HeaderProps {
     onExportPDF?: () => void;
@@ -7,7 +9,34 @@ interface HeaderProps {
 }
 
 export const Header = ({ onExportPDF, onExportJSON, onImportJSON }: HeaderProps) => {
-    const { proyectoActual } = useProyectoStore();
+    const { proyectoActual, actualizarProyecto } = useProyectoStore();
+    const [isEditing, setIsEditing] = useState(false);
+    const [tempName, setTempName] = useState('');
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isEditing && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [isEditing]);
+
+    const handleEditClick = () => {
+        if (!proyectoActual) return;
+        setTempName(proyectoActual.nombre);
+        setIsEditing(true);
+    };
+
+    const handleSave = () => {
+        if (tempName.trim()) {
+            actualizarProyecto({ nombre: tempName.trim() });
+        }
+        setIsEditing(false);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') handleSave();
+        if (e.key === 'Escape') setIsEditing(false);
+    };
 
     return (
         <header className="h-16 bg-white border-b border-slate-200 sticky top-0 z-40 px-6 flex items-center justify-between shadow-sm">
@@ -17,9 +46,25 @@ export const Header = ({ onExportPDF, onExportJSON, onImportJSON }: HeaderProps)
                     <span className="material-symbols-outlined">apartment</span>
                 </div>
                 <div>
-                    <h1 className="text-sm font-bold text-slate-900 leading-tight">
-                        {proyectoActual?.nombre || 'Nuevo Proyecto'}
-                    </h1>
+                    {isEditing ? (
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            value={tempName}
+                            onChange={(e) => setTempName(e.target.value)}
+                            onBlur={handleSave}
+                            onKeyDown={handleKeyDown}
+                            className="text-sm font-bold text-slate-900 leading-tight border-b-2 border-blue-500 outline-none w-64 p-0"
+                        />
+                    ) : (
+                        <h1
+                            className={`text-sm font-bold text-slate-900 leading-tight ${proyectoActual ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                            onClick={handleEditClick}
+                            title="Haz clic para editar el nombre"
+                        >
+                            {proyectoActual?.nombre || 'Nuevo Proyecto'}
+                        </h1>
+                    )}
                     <p className="text-xs text-slate-500">
                         {proyectoActual ? `Ubicación: ${proyectoActual.ubicacion}` : 'Configuración Inicial'}
                     </p>

@@ -21,6 +21,9 @@ interface ProyectoStore {
 
     // Recursos (Placeholder por ahora)
     agregarRecurso: (recurso: Recurso) => void;
+
+    // Metadatos
+    actualizarProyecto: (cambios: Partial<Proyecto>) => void;
 }
 
 export const useProyectoStore = create<ProyectoStore>()(
@@ -82,6 +85,16 @@ export const useProyectoStore = create<ProyectoStore>()(
             agregarRecurso: (recurso) => set((state) => ({
                 recursos: [...state.recursos, recurso]
             })),
+
+            actualizarProyecto: (cambios) => set((state) => {
+                if (!state.proyectoActual) return state;
+                return {
+                    proyectoActual: {
+                        ...state.proyectoActual,
+                        ...cambios
+                    }
+                };
+            }),
 
             resetProyecto: () => set({ proyectoActual: null, partidaEditando: null }),
         }),
