@@ -6,11 +6,13 @@ import { FCASCalculator } from './components/FCASCalculator';
 import { AppShell } from './components/layout/AppShell';
 import { ResourceSummary } from './components/ResourceSummary';
 import { generarPDFPresupuesto } from './utils/exportPDF';
-import { useRef } from 'react';
+import { SplashScreen } from './components/SplashScreen';
+import { useState, useRef } from 'react';
 
 function App() {
   const { proyectoActual, partidaEditando, resetProyecto, setProyecto, currentView } = useProyectoStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showSplash, setShowSplash] = useState(true);
 
   const handleExportJSON = () => {
     if (!proyectoActual) return;
@@ -96,6 +98,10 @@ function App() {
         />;
     }
   };
+
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
 
   return (
     <AppShell
