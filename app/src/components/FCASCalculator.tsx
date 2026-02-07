@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { calculateFCAS, type ProjectConfig } from '../services/api';
+import { calculateFCAS, type FCASRequest } from '../services/api';
 
 export const FCASCalculator = () => {
     const [result, setResult] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
-    const [config, setConfig] = useState<ProjectConfig>({
+    const [config, setConfig] = useState<FCASRequest>({
         vacation_days_base: 15,
         holidays_count: 12,
         bonus_days_base: 45,

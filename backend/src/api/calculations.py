@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from src.logic.fcas import calculate_fcas
 from src.logic.equipment import calculate_equipment_cop
+from src.logic.apu import calculate_apu_item
 
 router = APIRouter()
 
@@ -20,6 +21,11 @@ class ProjectConfig(BaseModel):
     inces_pct: Decimal = 2.0
     pension_apply_to_fcas: bool = True
     pension_law_pct: Decimal = 9.0
+
+# Define inputs for the APU calculation endpoint (simplified)
+class APUCalculationRequest(BaseModel):
+    partida: Dict[str, Any]
+    config: Dict[str, Any] 
 
 class EquipmentInput(BaseModel):
     valor_adquisicion: Decimal
@@ -56,6 +62,19 @@ def get_equipment_cop(data: EquipmentInput):
     try:
         data_dict = data.model_dump()
         result = calculate_equipment_cop(data_dict)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/apu")
+def calculate_apu(data: APUCalculationRequest):
+    """
+    Calculates/Recalculates a single APU item.
+    """
+    try:
+        # data.partida contains the full nested object
+        # data.config contains the project config
+        result = calculate_apu_item(data.partida, data.config)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

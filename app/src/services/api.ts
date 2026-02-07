@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API_URL = 'https://softwareapu-backend.onrender.com/api/v1/calculations';
 
-export interface ProjectConfig {
+export interface FCASRequest {
     vacation_days_base: number;
     holidays_count: number;
     bonus_days_base: number;
@@ -19,7 +19,8 @@ export interface FCASResult {
     fcas_percent: number;
 }
 
-export const calculateFCAS = async (config: ProjectConfig): Promise<FCASResult> => {
+export const calculateFCAS = async (config: FCASRequest): Promise<FCASResult> => {
+    // Note: The backend expects snake_case keys as aligned with this interface
     const response = await axios.post<FCASResult>(`${API_URL}/fcas`, config);
     return response.data;
 };

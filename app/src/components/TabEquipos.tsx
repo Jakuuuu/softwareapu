@@ -9,13 +9,23 @@ interface TabEquiposProps {
 }
 
 export const TabEquipos = ({ partidaId, equipos }: TabEquiposProps) => {
-    const { actualizarPartida } = useProyectoStore();
+    const { actualizarPartida, proyectoActual } = useProyectoStore();
+    const config = proyectoActual?.config;
+
+    // Helper for currency formatting
+    const fmtUsd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format;
+    const fmtBs = new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES' }).format;
 
     const handleUpdate = (index: number, field: keyof EquipoPartida, value: number | string) => {
         const updated = [...equipos];
         updated[index] = { ...updated[index], [field]: value };
-        // Subtotal = CostoHora * HorasDia * Cantidad
-        updated[index].subtotal = updated[index].costoHora * updated[index].horasPorDia * updated[index].cantidad;
+
+        // Auto-update BS if USD changes
+        if (field === 'costoDiaUsd' && config) {
+            const val = Number(value);
+            updated[index].costoDiaBs = val * config.tasaCambio;
+        }
+
         actualizarPartida(partidaId, { equipos: updated });
     };
 
@@ -24,10 +34,15 @@ export const TabEquipos = ({ partidaId, equipos }: TabEquiposProps) => {
             recursoId: crypto.randomUUID(),
             nombre: 'Nuevo Equipo',
             tipoEquipo: 'MAQUINARIA_PESADA',
-            costoHora: 0,
+
+            costoDiaBs: 0,
+            costoDiaUsd: 0,
+
             horasPorDia: 8,
             cantidad: 1,
-            subtotal: 0
+
+            subtotalBs: 0,
+            subtotalUsd: 0
         };
         actualizarPartida(partidaId, { equipos: [...equipos, nuevo] });
     };
@@ -45,8 +60,7 @@ export const TabEquipos = ({ partidaId, equipos }: TabEquiposProps) => {
                         <tr>
                             <th className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider text-slate-500">Equipo</th>
                             <th className="px-2 py-3 text-left w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Tipo</th>
-                            <th className="px-2 py-3 text-right w-24 font-semibold text-xs uppercase tracking-wider text-slate-500">$/Hora</th>
-                            <th className="px-2 py-3 text-right w-24 font-semibold text-xs uppercase tracking-wider text-slate-500">Hrs/Día</th>
+                            <th className="px-2 py-3 text-right w-24 font-semibold text-xs uppercase tracking-wider text-slate-500">$/Día</th>
                             <th className="px-2 py-3 text-right w-20 font-semibold text-xs uppercase tracking-wider text-slate-500">Cant.</th>
                             <th className="px-4 py-3 text-right w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Subtotal</th>
                             <th className="px-2 py-3 w-12"></th>
@@ -68,6 +82,7 @@ export const TabEquipos = ({ partidaId, equipos }: TabEquiposProps) => {
                                         options={[
                                             { label: 'Maquinaria', value: 'MAQUINARIA_PESADA' },
                                             { label: 'Equipo Menor', value: 'EQUIPO_MENOR' },
+                                            { label: 'Herramienta', value: 'HERRAMIENTA_MENOR' },
                                         ]}
                                         value={eq.tipoEquipo}
                                         onChange={(e) => handleUpdate(idx, 'tipoEquipo', e.target.value)}
@@ -81,19 +96,13 @@ export const TabEquipos = ({ partidaId, equipos }: TabEquiposProps) => {
                                             type="number"
                                             step="0.01"
                                             className="w-full text-right bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-md pl-4 pr-1 py-1.5 font-mono text-slate-700 text-xs"
-                                            value={eq.costoHora}
-                                            onChange={(e) => handleUpdate(idx, 'costoHora', Number(e.target.value))}
+                                            value={eq.costoDiaUsd}
+                                            onChange={(e) => handleUpdate(idx, 'costoDiaUsd', Number(e.target.value))}
                                         />
                                     </div>
-                                </td>
-                                <td className="px-2 py-2">
-                                    <input
-                                        type="number"
-                                        step="0.5"
-                                        className="w-full text-right bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-md px-1 py-1.5 font-mono text-slate-700 text-xs"
-                                        value={eq.horasPorDia}
-                                        onChange={(e) => handleUpdate(idx, 'horasPorDia', Number(e.target.value))}
-                                    />
+                                    <div className="text-right px-1 text-[10px] text-slate-400">
+                                        {fmtBs(eq.costoDiaBs)}
+                                    </div>
                                 </td>
                                 <td className="px-2 py-2">
                                     <input
@@ -105,7 +114,10 @@ export const TabEquipos = ({ partidaId, equipos }: TabEquiposProps) => {
                                     />
                                 </td>
                                 <td className="px-4 py-2 text-right font-bold text-slate-900 font-mono">
-                                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(eq.subtotal)}
+                                    {fmtUsd(eq.subtotalUsd)}
+                                    <div className="text-[10px] text-slate-400 font-normal">
+                                        {fmtBs(eq.subtotalBs)}
+                                    </div>
                                 </td>
                                 <td className="px-2 py-2 text-center">
                                     <button
@@ -124,9 +136,8 @@ export const TabEquipos = ({ partidaId, equipos }: TabEquiposProps) => {
                 + Agregar Equipo
             </Button>
 
-            {/* Note regarding herramientas menores */}
             <div className="bg-blue-50 p-3 rounded text-sm text-blue-800">
-                ℹ️ <b>Nota:</b> Las Herramientas Menores se calcularán automáticamente como un porcentaje global (5%) del costo de mano de obra en el resumen final.
+                ℹ️ <b>Nota:</b> Recuerda que el COP (Costo de Operación y Posesión) se expresa por DÍA.
             </div>
         </div>
     );

@@ -19,38 +19,51 @@ CREATE TABLE projects (
     start_date DATE,
     duration_months INTEGER,
     status VARCHAR(20) DEFAULT 'DRAFT', -- DRAFT, ACTIVE, FROZEN, ARCHIVED
+    
+    -- New: Full persistence of frontend config state
+    config JSONB DEFAULT '{}'::jsonb,
+    
+    -- Cache for Project Totals (Dual Currency)
+    costo_total_bs DECIMAL(18, 4) DEFAULT 0,
+    costo_total_usd DECIMAL(18, 4) DEFAULT 0,
+    
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Project Specific Configuration (FCAS, Currency, Laws)
+-- Project Specific Configuration (Relational Backup for Analytics)
+-- This mirrors the 'config' JSONB but in relational columns for SQL querying
 CREATE TABLE projects_config (
     project_id UUID PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
     
     -- Currency Base
-    base_currency_iso VARCHAR(3) DEFAULT 'USD', -- The "Anchor" currency
-    exchange_rate_ref DECIMAL(18, 4) NOT NULL DEFAULT 1.0000, -- e.g., 50.00 Bs/USD
+    base_currency_iso VARCHAR(3) DEFAULT 'USD',
+    exchange_rate DECIMAL(18, 4) NOT NULL DEFAULT 1.0000,
+    exchange_rate_date TIMESTAMP,
+    exchange_rate_source VARCHAR(50) DEFAULT 'MANUAL',
     
-    -- FCAS Parameters (Venezuelan Labor Law)
-    fcas_interest_rate DECIMAL(5, 2) DEFAULT 0.00, -- Tasa Interes Prestaciones
+    -- FCAS Parameters
     vacation_days_base INTEGER DEFAULT 15,
-    bonus_days_base INTEGER DEFAULT 45, -- Utilidades
-    holidays_count INTEGER DEFAULT 12, -- Días Feriados
-    avg_sickness_days INTEGER DEFAULT 3, -- Permisos Promedio
+    bonus_days_base INTEGER DEFAULT 45,
+    holidays_count INTEGER DEFAULT 12,
+    avg_sickness_days INTEGER DEFAULT 3,
     
-    -- Contributions (Aportes Patronales)
-    ivss_pct DECIMAL(5, 2) DEFAULT 11.00, -- Default 9-11%
+    -- Contributions
+    ivss_pct DECIMAL(5, 2) DEFAULT 11.00,
     faov_pct DECIMAL(5, 2) DEFAULT 2.00,
     inces_pct DECIMAL(5, 2) DEFAULT 2.00,
     
-    -- Ley de Pensiones 2025
+    -- Pension Law 2025
     pension_law_pct DECIMAL(5, 2) DEFAULT 9.00,
-    pension_apply_to_fcas BOOLEAN DEFAULT TRUE, -- TRUE: Inside FCAS, FALSE: Separate Indirect
+    pension_apply_to_fcas BOOLEAN DEFAULT TRUE,
     
     -- Indirect Costs
     admin_pct DECIMAL(5, 2) DEFAULT 15.00,
     profit_pct DECIMAL(5, 2) DEFAULT 10.00,
-    vat_pct DECIMAL(5, 2) DEFAULT 16.00
+    vat_pct DECIMAL(5, 2) DEFAULT 16.00,
+    
+    -- Calculated Factors Cache
+    fcas_factor_total DECIMAL(10, 4) DEFAULT 0
 );
 
 -- ==========================================
@@ -60,10 +73,10 @@ CREATE TABLE projects_config (
 -- Master Materials
 CREATE TABLE insumos_materiales (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    codigo_covenin VARCHAR(50) UNIQUE, -- Indexed unique code
+    codigo_covenin VARCHAR(50) UNIQUE,
     nombre VARCHAR(255) NOT NULL,
     unidad VARCHAR(20) NOT NULL,
-    familia VARCHAR(100), -- e.g. "Aceros", "Agregados"
+    familia VARCHAR(100),
     
     -- Dual Currency Core
     costo_bs DECIMAL(18, 4) DEFAULT 0,
@@ -74,23 +87,18 @@ CREATE TABLE insumos_materiales (
     is_active BOOLEAN DEFAULT TRUE
 );
 
--- Master Equipment (Includes COP Logic)
+-- Master Equipment
 CREATE TABLE insumos_equipos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     codigo VARCHAR(50) UNIQUE,
     nombre VARCHAR(255) NOT NULL,
-    tipo VARCHAR(50), -- Maquinaria, Vehiculo, Equipo Menor
+    tipo VARCHAR(50), 
     
-    -- COP Calculation Parameters
-    valor_adquisicion DECIMAL(18, 4) DEFAULT 0, -- Va
-    vida_util_horas INTEGER DEFAULT 10000, -- Ve
-    valor_rescate_pct DECIMAL(5, 2) DEFAULT 20.00, -- p% of Va
-    factor_mantenimiento DECIMAL(5, 2) DEFAULT 0.80, -- K
-    
-    -- Operating Consumption
-    potencia_hp DECIMAL(10, 2),
-    consumo_combustible_hora DECIMAL(10, 4), -- Galones/Litros por hora
-    costo_lubricante_factor DECIMAL(5, 2) DEFAULT 0.10, -- % of fuel cost
+    -- COP Parameters
+    valor_adquisicion DECIMAL(18, 4) DEFAULT 0,
+    vida_util_horas INTEGER DEFAULT 10000,
+    valor_rescate_pct DECIMAL(5, 2) DEFAULT 20.00,
+    factor_mantenimiento DECIMAL(5, 2) DEFAULT 0.80,
     
     -- Calculated Daily Rate Cache
     costo_dia_bs DECIMAL(18, 4),
@@ -99,17 +107,17 @@ CREATE TABLE insumos_equipos (
     fecha_referencia TIMESTAMP DEFAULT NOW()
 );
 
--- Master Labor (Tabulador de Oficios)
+-- Master Labor
 CREATE TABLE tabulador_mano_obra (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     codigo VARCHAR(50) UNIQUE,
-    cargo VARCHAR(255) NOT NULL, -- Maestro, Ayudante, etc.
-    grupo VARCHAR(50), -- Obrero, Empleado
+    cargo VARCHAR(255) NOT NULL,
+    grupo VARCHAR(50),
     
     -- Salary Components
     salario_base_diario_bs DECIMAL(18, 4) DEFAULT 0,
     salario_base_diario_usd DECIMAL(18, 4) DEFAULT 0,
-    bono_alimentacion_diario_bs DECIMAL(18, 4) DEFAULT 0, -- Cestaticket logic
+    bono_alimentacion_diario_bs DECIMAL(18, 4) DEFAULT 0,
     bono_alimentacion_diario_usd DECIMAL(18, 4) DEFAULT 0,
     
     tasa_cambio DECIMAL(10, 4),
@@ -117,55 +125,7 @@ CREATE TABLE tabulador_mano_obra (
 );
 
 -- ==========================================
--- 3. PROJECT LOCAL RESOURCES (SNAPSHOTS)
--- ==========================================
--- NOTE: These tables isolate project costs from global market fluctuations.
-
-CREATE TABLE project_materials (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-    original_materail_id UUID REFERENCES insumos_materiales(id), -- Optional link back
-    
-    codigo_covenin VARCHAR(50),
-    nombre VARCHAR(255) NOT NULL,
-    unidad VARCHAR(20),
-    
-    -- Frozen Costs for this Project
-    costo_bs DECIMAL(18, 4) NOT NULL,
-    costo_usd DECIMAL(18, 4) NOT NULL,
-    tasa_cambio DECIMAL(10, 4) NOT NULL,
-    fecha_referencia TIMESTAMP DEFAULT NOW(),
-    
-    UNIQUE(project_id, codigo_covenin)
-);
-
-CREATE TABLE project_labor (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-    original_labor_id UUID REFERENCES tabulador_mano_obra(id),
-    
-    cargo VARCHAR(255),
-    
-    salario_base_diario_bs DECIMAL(18, 4) NOT NULL,
-    salario_base_diario_usd DECIMAL(18, 4) NOT NULL,
-    bono_alimentacion_diario_bs DECIMAL(18, 4),
-    bono_alimentacion_diario_usd DECIMAL(18, 4),
-    tasa_cambio DECIMAL(10, 4) NOT NULL
-);
-
-CREATE TABLE project_equipment (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-    original_equipment_id UUID REFERENCES insumos_equipos(id),
-    
-    nombre VARCHAR(255),
-    costo_dia_bs DECIMAL(18, 4) NOT NULL,
-    costo_dia_usd DECIMAL(18, 4) NOT NULL,
-    tasa_cambio DECIMAL(10, 4) NOT NULL
-);
-
--- ==========================================
--- 4. APU STRUCTURE (Analysis of Unit Prices)
+-- 3. APU STRUCTURE (Analysis of Unit Prices)
 -- ==========================================
 
 -- Partidas (Headers)
@@ -173,38 +133,57 @@ CREATE TABLE apu_partidas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     
-    codigo VARCHAR(50) NOT NULL, -- e.g. "3.1"
+    codigo VARCHAR(50) NOT NULL,
     descripcion TEXT NOT NULL,
     unidad VARCHAR(20) NOT NULL,
-    cantidad DECIMAL(18, 4) DEFAULT 0, -- Metrado final
+    cantidad DECIMAL(18, 4) DEFAULT 0,
+    rendimiento DECIMAL(18, 4) NOT NULL DEFAULT 1,
     
-    rendimiento DECIMAL(18, 4) NOT NULL DEFAULT 1, -- CRITICAL: Yield per day
+    capitulo VARCHAR(100),
     
-    -- Calculated Cache (Optional, for fast read)
-    precio_unitario_bs DECIMAL(18, 4),
-    precio_unitario_usd DECIMAL(18, 4),
+    -- Cost Cache (Dual Currency)
+    costo_materiales_bs DECIMAL(18, 4) DEFAULT 0,
+    costo_materiales_usd DECIMAL(18, 4) DEFAULT 0,
+    
+    costo_mano_obra_bs DECIMAL(18, 4) DEFAULT 0,
+    costo_mano_obra_usd DECIMAL(18, 4) DEFAULT 0,
+    
+    costo_equipos_bs DECIMAL(18, 4) DEFAULT 0,
+    costo_equipos_usd DECIMAL(18, 4) DEFAULT 0,
+    
+    costo_directo_bs DECIMAL(18, 4) DEFAULT 0,
+    costo_directo_usd DECIMAL(18, 4) DEFAULT 0,
+    
+    precio_unitario_bs DECIMAL(18, 4) DEFAULT 0,
+    precio_unitario_usd DECIMAL(18, 4) DEFAULT 0,
+    
+    precio_total_bs DECIMAL(18, 4) DEFAULT 0,
+    precio_total_usd DECIMAL(18, 4) DEFAULT 0,
     
     last_calculated_at TIMESTAMP
 );
 
--- APU Detalle (Items inside the analysis)
+-- APU Detalle
 CREATE TABLE apu_detalles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     partida_id UUID REFERENCES apu_partidas(id) ON DELETE CASCADE,
     
-    -- Polymorphic relation to Project Resources (Manual implementation)
     resource_type VARCHAR(20) NOT NULL, -- 'MATERIAL', 'LABOR', 'EQUIPMENT'
-    resource_id UUID NOT NULL, -- Points to project_materials, project_labor, or project_equipment
+    resource_name VARCHAR(255), -- Denormalized name for display
     
-    cantidad DECIMAL(18, 6) NOT NULL, -- coeff per unit. 6 decimals for precision
-    desperdicio_pct DECIMAL(5, 2) DEFAULT 0.00, -- Waste factor (e.g. 5%)
+    cantidad DECIMAL(18, 6) NOT NULL,
+    desperdicio_pct DECIMAL(5, 2) DEFAULT 0.00,
     
-    -- Calculated subtotal cache
-    costo_total_renglon_bs DECIMAL(18, 4),
-    costo_total_renglon_usd DECIMAL(18, 4)
+    -- Unit Prices Snapshot (Dual)
+    precio_unitario_bs DECIMAL(18, 4) DEFAULT 0,
+    precio_unitario_usd DECIMAL(18, 4) DEFAULT 0,
+    
+    -- Subtotals (Dual)
+    subtotal_bs DECIMAL(18, 4) DEFAULT 0,
+    subtotal_usd DECIMAL(18, 4) DEFAULT 0
 );
 
--- Index recommendations
+-- Indices
 CREATE INDEX idx_projects_status ON projects(status);
 CREATE INDEX idx_apu_partidas_project ON apu_partidas(project_id);
 CREATE INDEX idx_apu_detalles_partida ON apu_detalles(partida_id);

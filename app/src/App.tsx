@@ -7,6 +7,7 @@ import { AppShell } from './components/layout/AppShell';
 import { ResourceSummary } from './components/ResourceSummary';
 import { generarPDFPresupuesto } from './utils/exportPDF';
 import { SplashScreen } from './components/SplashScreen';
+import { ProjectSnapshots } from './components/ProjectSnapshots';
 import { useState, useRef } from 'react';
 
 function App() {
@@ -89,6 +90,8 @@ function App() {
         return <ResourceSummary type="manoObra" title="Resumen de Mano de Obra" />;
       case 'equipos':
         return <ResourceSummary type="equipos" title="Resumen de Equipos" />;
+      case 'versiones':
+        return <div className="max-w-4xl mx-auto h-[calc(100vh-140px)]"><ProjectSnapshots /></div>;
       case 'configuracion':
         return <div className="max-w-3xl mx-auto"><ConfiguracionProyecto /></div>;
       default:

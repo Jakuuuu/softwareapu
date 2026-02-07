@@ -11,7 +11,13 @@ type FormValues = {
     iva: number;
     utilidad: number;
     administracion: number;
-    fcas: number;
+    // FCAS Components
+    fcasFactor: number;
+    diasFeriados: number;
+    diasUtilidades: number;
+    diasVacaciones: number;
+    // Tasa
+    tasaCambio: number;
 };
 
 export const ConfiguracionProyecto = () => {
@@ -24,16 +30,35 @@ export const ConfiguracionProyecto = () => {
             propietario: proyectoActual?.propietario || '',
             tipoObra: proyectoActual?.tipoObra || 'EDIFICACION',
             tipoObraOtro: proyectoActual?.tipoObraOtro || '',
-            iva: proyectoActual?.factoresGlobales.iva || 16,
-            utilidad: proyectoActual?.factoresGlobales.utilidad || 12,
-            administracion: proyectoActual?.factoresGlobales.administracion || 12,
-            fcas: proyectoActual?.factoresGlobales.fcas || 72,
+            iva: proyectoActual?.config.iva || 16,
+            utilidad: proyectoActual?.config.utilidad || 12,
+            administracion: proyectoActual?.config.administracion || 12,
+            fcasFactor: proyectoActual?.config.fcas.factorTotal || 72,
+            diasFeriados: proyectoActual?.config.fcas.diasFeriados || 12,
+            diasUtilidades: proyectoActual?.config.fcas.diasUtilidades || 60,
+            diasVacaciones: proyectoActual?.config.fcas.diasVacaciones || 15,
+            tasaCambio: proyectoActual?.config.tasaCambio || 50.00,
         }
     });
 
     const currentWorkType = watch('tipoObra');
 
     const onSubmit = (data: FormValues) => {
+        // Create new project structure
+        // Note: In a real app we might merge with existing config to preserve other fields like pension settings
+        const defaultConfig = proyectoActual?.config || {
+            monedaPrincipal: 'USD',
+            fuenteTasa: 'BCV_OFICIAL',
+            fechaTasa: new Date().toISOString(),
+            fcas: {
+                porcentajeInces: 2,
+                porcentajeIvss: 11,
+                porcentajeFaov: 2,
+                porcentajePensiones: 9,
+                imputacionPensiones: 'COSTO_DIRECTO'
+            }
+        };
+
         const nuevoProyecto: Proyecto = {
             id: proyectoActual?.id || crypto.randomUUID(),
             nombre: data.nombre,
@@ -41,11 +66,19 @@ export const ConfiguracionProyecto = () => {
             propietario: data.propietario,
             tipoObra: data.tipoObra,
             tipoObraOtro: data.tipoObra === 'OTRO' ? data.tipoObraOtro : undefined,
-            factoresGlobales: {
+            config: {
+                ...defaultConfig,
+                tasaCambio: Number(data.tasaCambio),
                 iva: Number(data.iva),
                 utilidad: Number(data.utilidad),
                 administracion: Number(data.administracion),
-                fcas: Number(data.fcas),
+                fcas: {
+                    ...defaultConfig.fcas, // Preserve immutable defaults
+                    factorTotal: Number(data.fcasFactor),
+                    diasFeriados: Number(data.diasFeriados),
+                    diasUtilidades: Number(data.diasUtilidades),
+                    diasVacaciones: Number(data.diasVacaciones),
+                }
             },
             fechaCreacion: proyectoActual?.fechaCreacion || new Date().toISOString(),
             partidas: proyectoActual?.partidas || [],
@@ -73,7 +106,7 @@ export const ConfiguracionProyecto = () => {
                     <h1 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center text-slate-900">
                         Configuración <span className="text-slate-400 font-normal">del Proyecto</span>
                     </h1>
-                    <div className="w-10"></div> {/* Spacer for alignment */}
+                    <div className="w-10"></div>
                 </header>
             </div>
 
@@ -173,19 +206,55 @@ export const ConfiguracionProyecto = () => {
                     )}
                 </section>
 
-                {/* Global Factors */}
+                {/* Economy & FCAS */}
                 <section className="space-y-4">
                     <div className="flex items-center gap-2 px-1">
-                        <span className="material-symbols-outlined text-primary text-[20px]">settings</span>
-                        <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">Factores Globales</h2>
+                        <span className="material-symbols-outlined text-primary text-[20px]">currency_exchange</span>
+                        <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">Economía & FCAS</h2>
                     </div>
-                    <div className="rounded-xl bg-white p-5 border border-gray-200 shadow-sm">
-                        <p className="text-xs text-gray-500 mb-5 font-medium">Porcentajes base para el análisis de precios unitarios.</p>
+                    <div className="rounded-xl bg-white p-5 border border-gray-200 shadow-sm space-y-5">
+
+                        {/* Exchange Rate */}
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                            <label className="block">
+                                <span className="text-sm font-bold text-blue-900 mb-1.5 block">Tasa de Cambio (Bs/USD)</span>
+                                <div className="relative flex items-center">
+                                    <input
+                                        {...register('tasaCambio', { required: true, min: 0 })}
+                                        type="number"
+                                        step="0.01"
+                                        className="w-full rounded-lg border-blue-200 bg-white focus:border-blue-500 focus:ring-blue-500 h-11 pl-3 pr-12 font-bold text-blue-900 text-right transition-colors shadow-sm"
+                                        placeholder="0.00"
+                                    />
+                                    <span className="absolute right-3 text-blue-400 font-bold text-sm">Bs</span>
+                                </div>
+                            </label>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-x-4 gap-y-5">
                             <InputPercentage label="IVA" name="iva" register={register} />
                             <InputPercentage label="Utilidad" name="utilidad" register={register} />
                             <InputPercentage label="Administración" name="administracion" register={register} />
-                            <InputPercentage label="FCAS" name="fcas" register={register} />
+                            <InputPercentage label="FCAS Total" name="fcasFactor" register={register} />
+                        </div>
+
+                        {/* FCAS Breakdown (Simplified) */}
+                        <div className="border-t border-gray-100 pt-4">
+                            <h3 className="text-xs font-bold text-slate-400 mb-3 uppercase">Detalles FCAS</h3>
+                            <div className="grid grid-cols-3 gap-3">
+                                <InputNumber label="Días Feriados" name="diasFeriados" register={register} />
+                                <InputNumber label="Días Utilid." name="diasUtilidades" register={register} />
+                                <InputNumber label="Días Vacac." name="diasVacaciones" register={register} />
+                            </div>
+                            <div className="mt-4 pt-2 border-t border-gray-100 flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-700">Ley de Pensiones 2025</p>
+                                    <p className="text-xs text-slate-500">Incluir 9% en estructura de costos</p>
+                                </div>
+                                <div className="text-xs font-bold text-primary bg-blue-50 px-2 py-1 rounded">
+                                    Automático
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -223,6 +292,24 @@ const InputPercentage = ({ label, name, register }: { label: string, name: keyof
                 placeholder="0"
             />
             <span className="absolute right-3 text-gray-400 font-medium text-sm">%</span>
+        </div>
+    </div>
+);
+
+// Helper Component for Numbers
+const InputNumber = ({ label, name, register }: { label: string, name: keyof FormValues, register: UseFormRegister<FormValues> }) => (
+    <div className="flex flex-col group">
+        <div className="flex items-center gap-1 mb-1.5 ml-1">
+            <label className="text-xs font-semibold text-slate-500 uppercase group-focus-within:text-primary transition-colors">{label}</label>
+        </div>
+        <div className="relative flex items-center">
+            <input
+                {...register(name, { required: true, min: 0 })}
+                type="number"
+                step="1"
+                className="w-full rounded-lg border-gray-300 bg-gray-50 focus:bg-white focus:border-primary focus:ring-primary h-9 px-2 font-medium text-slate-800 text-right transition-colors shadow-sm text-sm"
+                placeholder="0"
+            />
         </div>
     </div>
 );

@@ -9,13 +9,23 @@ interface TabManoObraProps {
 }
 
 export const TabManoObra = ({ partidaId, manoObra }: TabManoObraProps) => {
-    const { actualizarPartida } = useProyectoStore();
+    const { actualizarPartida, proyectoActual } = useProyectoStore();
+    const config = proyectoActual?.config;
+
+    // Helper for currency formatting
+    const fmtUsd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format;
+    const fmtBs = new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES' }).format;
 
     const handleUpdate = (index: number, field: keyof ManoObraPartida, value: number | string) => {
         const updated = [...manoObra];
         updated[index] = { ...updated[index], [field]: value };
-        // Subtotal is jornal * cantidad (FCAS is applied later in total calc)
-        updated[index].subtotal = updated[index].jornal * updated[index].cantidad;
+
+        // Auto-update BS if USD changes
+        if (field === 'jornalBaseUsd' && config) {
+            const val = Number(value);
+            updated[index].jornalBaseBs = val * config.tasaCambio;
+        }
+
         actualizarPartida(partidaId, { manoObra: updated });
     };
 
@@ -25,9 +35,16 @@ export const TabManoObra = ({ partidaId, manoObra }: TabManoObraProps) => {
             nombre: 'Nuevo Obrero',
             categoria: 'PEON',
             cantidad: 1,
-            jornal: 20, // Min wage ref
-            subtotal: 20
+
+            jornalBaseBs: 0,
+            jornalBaseUsd: 20, // Default prompt
+
+            subtotalBs: 0,
+            subtotalUsd: 0
         };
+        // Auto-calc initial Bs
+        if (config) nuevo.jornalBaseBs = nuevo.jornalBaseUsd * config.tasaCambio;
+
         actualizarPartida(partidaId, { manoObra: [...manoObra, nuevo] });
     };
 
@@ -44,8 +61,8 @@ export const TabManoObra = ({ partidaId, manoObra }: TabManoObraProps) => {
                         <tr>
                             <th className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider text-slate-500">Categoría</th>
                             <th className="px-2 py-3 text-right w-24 font-semibold text-xs uppercase tracking-wider text-slate-500">Cant.</th>
-                            <th className="px-2 py-3 text-right w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Jornal ($)</th>
-                            <th className="px-4 py-3 text-right w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Total Jornal</th>
+                            <th className="px-2 py-3 text-right w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Jornal (USD)</th>
+                            <th className="px-4 py-3 text-right w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Total</th>
                             <th className="px-2 py-3 w-12"></th>
                         </tr>
                     </thead>
@@ -64,6 +81,14 @@ export const TabManoObra = ({ partidaId, manoObra }: TabManoObraProps) => {
                                         onChange={(e) => handleUpdate(idx, 'categoria', e.target.value)}
                                         className="h-9 py-1 text-sm bg-white border-transparent focus:border-primary/50 focus:ring-2 focus:ring-primary/20 shadow-sm"
                                     />
+                                    <div className="mt-1">
+                                        <input
+                                            className="w-full bg-transparent text-xs text-slate-500 focus:outline-none border-b border-transparent focus:border-gray-200"
+                                            value={mo.nombre}
+                                            onChange={(e) => handleUpdate(idx, 'nombre', e.target.value)}
+                                            placeholder="Descripción opcional"
+                                        />
+                                    </div>
                                 </td>
                                 <td className="px-2 py-2">
                                     <input
@@ -81,13 +106,19 @@ export const TabManoObra = ({ partidaId, manoObra }: TabManoObraProps) => {
                                             type="number"
                                             step="0.01"
                                             className="w-full text-right bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-md pl-4 pr-2 py-1.5 font-mono text-slate-700"
-                                            value={mo.jornal}
-                                            onChange={(e) => handleUpdate(idx, 'jornal', Number(e.target.value))}
+                                            value={mo.jornalBaseUsd}
+                                            onChange={(e) => handleUpdate(idx, 'jornalBaseUsd', Number(e.target.value))}
                                         />
+                                    </div>
+                                    <div className="text-right px-2 text-[10px] text-slate-400">
+                                        {fmtBs(mo.jornalBaseBs)}
                                     </div>
                                 </td>
                                 <td className="px-4 py-2 text-right font-bold text-slate-900 font-mono">
-                                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(mo.subtotal)}
+                                    {fmtUsd(mo.subtotalUsd)}
+                                    <div className="text-[10px] text-slate-400 font-normal">
+                                        {fmtBs(mo.subtotalBs)}
+                                    </div>
                                 </td>
                                 <td className="px-2 py-2 text-center">
                                     <button
@@ -105,6 +136,11 @@ export const TabManoObra = ({ partidaId, manoObra }: TabManoObraProps) => {
             <Button onClick={agregarObrero} variant="secondary" className="w-full border-dashed border-2">
                 + Agregar Trabajador
             </Button>
+
+            <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
+                <span className="material-symbols-outlined text-sm">info</span>
+                <span>El cálculo incluye FCAS ({config?.fcas.factorTotal}%) sobre el Salario Base.</span>
+            </div>
         </div>
     );
 };

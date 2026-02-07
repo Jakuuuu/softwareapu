@@ -1,31 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.api import calculations
+from src.api import calculations, projects
 
-app = FastAPI(
-    title="Boostear API",
-    description="Backend for Venezuela-Proof Construction Budgeting",
-    version="0.1.0"
-)
-
-# CORS Configuration
-origins = [
-    "http://localhost:5173", # Vite Default
-    "http://localhost:3000",
-    "tauri://localhost",
-    "https://tauri.localhost"
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # Allow all for dev
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ... existing code ...
 
 # Include Routes
 app.include_router(calculations.router, prefix="/api/v1/calculations", tags=["Calculations"])
+app.include_router(projects.router, prefix="/api/v1/projects", tags=["Projects"])
 
 @app.get("/health")
 def health_check():

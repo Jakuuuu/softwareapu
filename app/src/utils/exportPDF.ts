@@ -13,14 +13,12 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
         format: 'a4'
     });
 
-
-
-    // Helper for formatting currency
-    const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format;
+    // Helper for formatting currency (USD)
+    const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format;
     const now = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+    const config = proyecto.config;
 
     // 2. HEADER
-    // Logo text/placeholder
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 58, 138); // Blue 900
@@ -28,12 +26,12 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
 
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text('PRESUPUESTO DE OBRA', 105, 23, { align: 'center' });
+    doc.text('PRESUPUESTO DE OBRA (USD)', 105, 23, { align: 'center' });
 
     doc.setDrawColor(200, 200, 200);
     doc.line(14, 26, 196, 26);
 
-    // 3. PROJECT INFO (Grid Layout)
+    // 3. PROJECT INFO
     const infoY = 32;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
@@ -59,8 +57,14 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
     doc.setFont('helvetica', 'normal');
     doc.text(now, 135, infoY + 6);
 
+    // Tasa Cambio Info
+    doc.setFont('helvetica', 'bold');
+    doc.text('TASA:', 110, infoY + 12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${config.tasaCambio} Bs/USD`, 135, infoY + 12);
+
     // 4. GLOBAL FACTORS
-    const factorsY = infoY + 14;
+    const factorsY = infoY + 18;
     doc.setFillColor(245, 247, 250);
     doc.roundedRect(14, factorsY, 182, 12, 1, 1, 'F');
 
@@ -68,8 +72,7 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(71, 85, 105); // Slate 600
 
-    const gf = proyecto.factoresGlobales;
-    const factorsText = `FACTORES APLICADOS:   IVA: ${gf.iva}%    |    Utilidad: ${gf.utilidad}%    |    Administración: ${gf.administracion}%    |    FCAS: ${gf.fcas}%`;
+    const factorsText = `FACTORES:   IVA: ${config.iva}%    |    Utilidad: ${config.utilidad}%    |    Admin: ${config.administracion}%    |    FCAS: ${config.fcas.factorTotal}%`;
     doc.text(factorsText, 105, factorsY + 7, { align: 'center' });
 
     // 5. MAIN TABLE (Budget Summary)
@@ -78,13 +81,13 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
         p.titulo || 'Sin Descripción',
         p.unidadMedida || '-',
         p.cantidad || 0,
-        fmt(p.precioUnitario || 0),
-        fmt(p.precioTotal || 0)
+        fmt(p.precioUnitarioUsd || 0),
+        fmt(p.precioTotalUsd || 0)
     ]);
 
     autoTable(doc, {
         startY: factorsY + 16,
-        head: [['CÓDIGO', 'DESCRIPCIÓN', 'UND', 'CANT', 'P. UNITARIO', 'TOTAL']],
+        head: [['CÓDIGO', 'DESCRIPCIÓN', 'UND', 'CANT', 'P. UNITARIO ($)', 'TOTAL ($)']],
         body: tableBody,
         theme: 'grid',
         headStyles: {
@@ -113,7 +116,6 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
     });
 
     // 6. ECONOMIC SUMMARY (Footer)
-    // Cast to any to access finalY
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const finalY = (doc as any).lastAutoTable.finalY + 10;
 
@@ -122,32 +124,37 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
         doc.addPage();
     }
 
-    // Calculate totals
-    const totalMateriales = proyecto.partidas.reduce((sum, p) => sum + (p.costoMateriales * p.cantidad), 0);
-    const totalManoObra = proyecto.partidas.reduce((sum, p) => sum + (p.costoManoObra * p.cantidad), 0);
-    const totalEquipos = proyecto.partidas.reduce((sum, p) => sum + (p.costoEquipos * p.cantidad), 0);
+    // Calculate totals (Using USD fields)
+    const totalMateriales = proyecto.partidas.reduce((sum, p) => sum + (p.costoMaterialesUsd * p.cantidad), 0);
+    const totalManoObra = proyecto.partidas.reduce((sum, p) => sum + (p.costoManoObraUsd * p.cantidad), 0);
+    const totalEquipos = proyecto.partidas.reduce((sum, p) => sum + (p.costoEquiposUsd * p.cantidad), 0);
 
     const costoDirectoTotal = totalMateriales + totalManoObra + totalEquipos;
-    const adminTotal = costoDirectoTotal * (gf.administracion / 100);
-    const utilidadTotal = costoDirectoTotal * (gf.utilidad / 100);
-    const subtotal = costoDirectoTotal + adminTotal + utilidadTotal;
-    const ivaTotal = subtotal * (gf.iva / 100);
+
+    // Recalculate global factors based on total direct cost
+    // Assuming standard cascade:
+    const adminTotal = costoDirectoTotal * (config.administracion / 100);
+    // Utility usually on MD + Admin or MD? Let's assume MD + Admin for max
+    const sub1 = costoDirectoTotal + adminTotal;
+    const utilidadTotal = sub1 * (config.utilidad / 100);
+
+    const subtotal = sub1 + utilidadTotal;
+    const ivaTotal = subtotal * (config.iva / 100);
     const granTotal = subtotal + ivaTotal;
 
     const summaryX = 110;
-    const summaryHeight = 60; // Approximate height of the summary box
+    const summaryHeight = 60;
 
-    // Check if we need a new page for the summary
     let sumY = finalY;
-    if (sumY + summaryHeight > 270) { // 270 is approx bottom margin considering footer
+    if (sumY + summaryHeight > 270) {
         doc.addPage();
-        sumY = 20; // Reset Y for new page
+        sumY = 20;
     }
 
     // Draw Summary Box
     doc.setDrawColor(200);
     doc.setFillColor(255, 255, 255);
-    doc.rect(summaryX - 5, sumY - 5, 90, 60);
+    doc.rect(summaryX - 5, sumY - 5, 90, 70); // Taller for more info if needed
 
     doc.setFontSize(9);
     const drawRow = (label: string, value: number, bold = false) => {
@@ -169,41 +176,41 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
     drawRow('COSTO DIRECTO:', costoDirectoTotal, true);
     sumY += 2;
 
-    drawRow(`Administración (${gf.administracion}%):`, adminTotal);
-    drawRow(`Utilidad (${gf.utilidad}%):`, utilidadTotal);
+    drawRow(`Administración (${config.administracion}%):`, adminTotal);
+    // Utility calculation note: logic might vary, sticking to simple cascade
+    drawRow(`Utilidad (${config.utilidad}%):`, utilidadTotal);
 
     doc.line(summaryX, sumY - 2, summaryX + 80, sumY - 2);
     sumY += 2;
 
-    drawRow('SUBTOTAL:', subtotal, true);
-    drawRow(`IVA (${gf.iva}%):`, ivaTotal);
+    drawRow('SUBTOTAL (Sin IVA):', subtotal, true);
+    drawRow(`IVA (${config.iva}%):`, ivaTotal);
 
     sumY += 4;
-    doc.setFillColor(30, 58, 138); // Blue 900 bg
+    doc.setFillColor(30, 58, 138); // Blue 900
     doc.rect(summaryX - 5, sumY - 6, 90, 12, 'F');
-    doc.setTextColor(255, 255, 255); // White text
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL PROYECTO:', summaryX, sumY + 1);
+    doc.text('TOTAL (USD):', summaryX, sumY + 1);
     doc.text(fmt(granTotal), summaryX + 80, sumY + 1, { align: 'right' });
 
-    // 7. FOOTER (Page Numbers)
+    // 7. FOOTER
     const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setTextColor(150);
         doc.text(`Página ${i} de ${totalPages}`, 196, 285, { align: 'right' });
-        doc.text(`Generado el: ${now}`, 14, 285);
+        doc.text(`Generado el: ${now} - Tasa Ref: ${config.tasaCambio} Bs/$`, 14, 285);
     }
 
-    // 8. SAVE (Mobile Compatible)
+    // 8. SAVE
     const filename = `Presupuesto_${(proyecto.nombre || 'Proyecto').replace(/\s+/g, '_')}.pdf`;
 
     try {
         if (Capacitor.isNativePlatform()) {
             const base64Data = doc.output('datauristring').split(',')[1];
-
             try {
                 const savedFile = await Filesystem.writeFile({
                     path: filename,
@@ -211,7 +218,6 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
                     directory: Directory.Documents,
                     recursive: true
                 });
-
                 await Share.share({
                     title: 'Presupuesto de Obra',
                     text: `Presupuesto del proyecto: ${proyecto.nombre}`,
@@ -220,42 +226,27 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
                 });
             } catch (e) {
                 console.error("Filesystem/Share error:", e);
-                // Fallback or alert if needed
-                alert("Error al compartir el archivo en dispositivo móvil.");
+                alert("Error al compartir en móvil.");
             }
             return;
         }
 
-        // Method 1: Standard save (Works on desktop/some mobiles)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (typeof (window.navigator as any).msSaveBlob !== 'undefined') {
-            // IE/Edge legacy
-            doc.save(filename);
-            return;
-        }
-
-        // Method 2: Blob + Link (Robust for Mobile/WebView)
         const blob = doc.output('blob');
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-
         link.href = url;
         link.download = filename;
-        link.target = '_blank'; // Required for some browsers to trigger download
-
+        link.target = '_blank';
         document.body.appendChild(link);
         link.click();
-
-        // Cleanup
         setTimeout(() => {
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
         }, 100);
 
     } catch (error) {
-        console.error("Download failed, trying fallback:", error);
-        // Fallback: Direct save attempt
+        console.error("Download failed:", error);
         doc.save(filename);
-        alert("Si la descarga no inicia, por favor revisa los permisos de tu navegador.");
+        alert("Si la descarga no inicia, revisa los permisos.");
     }
 };

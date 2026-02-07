@@ -8,14 +8,32 @@ interface TabMaterialesProps {
 }
 
 export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => {
-    const { actualizarPartida } = useProyectoStore();
+    const { actualizarPartida, proyectoActual } = useProyectoStore();
+    const config = proyectoActual?.config;
+
+    // Helper for currency formatting
+    const fmtUsd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format;
+    const fmtBs = new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES' }).format;
 
     const handleUpdate = (index: number, field: keyof MaterialPartida, value: number | string) => {
         const updatedMateriales = [...materiales];
         updatedMateriales[index] = { ...updatedMateriales[index], [field]: value };
-        // Recalculate subtotal for row
-        const mat = updatedMateriales[index];
-        mat.subtotal = mat.cantidad * mat.precioUnitario * (1 + mat.desperdicio / 100);
+
+        // Internal recalculation for immediate UI feedback (simulating the store logic)
+        // Ideally the store should handle this via CalculadoraAPU but we can do a quick update here
+        // to prevent UI jumpiness before the store updates. 
+        // Although the store 'actualizarPartida' calls CalculadoraAPU, so we just send the raw change.
+
+        // However, if we change 'precioBaseUsd', we might want to auto-update 'precioBaseBs' based on rate?
+        // Or vice-versa?
+        // For now, let's assume inputs are independent or handled by the store calculation if we pass the change.
+        // But the store calculates SUBTOTALS, not the Unit Prices in other currency (unless we enforce it).
+        // Let's implement a simple rule: if USD changes, BS updates based on rate.
+
+        if (field === 'precioBaseUsd' && config) {
+            const val = Number(value);
+            updatedMateriales[index].precioBaseBs = val * config.tasaCambio;
+        }
 
         actualizarPartida(partidaId, { materiales: updatedMateriales });
     };
@@ -26,9 +44,14 @@ export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => 
             nombre: 'Nuevo Material',
             unidad: 'UND',
             cantidad: 1,
-            precioUnitario: 0,
             desperdicio: 5,
-            subtotal: 0
+
+            precioBaseBs: 0,
+            precioBaseUsd: 0,
+            tasaCambioAplicada: config?.tasaCambio || 0,
+
+            subtotalBs: 0,
+            subtotalUsd: 0
         };
         actualizarPartida(partidaId, { materiales: [...materiales, nuevo] });
     };
@@ -46,7 +69,7 @@ export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => 
                         <tr>
                             <th className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider text-slate-500">Recurso</th>
                             <th className="px-2 py-3 text-center w-20 font-semibold text-xs uppercase tracking-wider text-slate-500">Und</th>
-                            <th className="px-2 py-3 text-right w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Precio</th>
+                            <th className="px-2 py-3 text-right w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Precio USD</th>
                             <th className="px-2 py-3 text-right w-24 font-semibold text-xs uppercase tracking-wider text-slate-500">Cant.</th>
                             <th className="px-2 py-3 text-right w-24 font-semibold text-xs uppercase tracking-wider text-slate-500">Desp %</th>
                             <th className="px-4 py-3 text-right w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Total</th>
@@ -63,6 +86,9 @@ export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => 
                                         onChange={(e) => handleUpdate(idx, 'nombre', e.target.value)}
                                         placeholder="Nombre del material"
                                     />
+                                    <div className="px-2 text-[10px] text-slate-400">
+                                        {fmtBs(mat.precioBaseBs)}
+                                    </div>
                                 </td>
                                 <td className="px-2 py-2">
                                     <input
@@ -78,8 +104,8 @@ export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => 
                                             type="number"
                                             step="0.01"
                                             className="w-full text-right bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-md pl-4 pr-2 py-1.5 font-mono text-slate-700"
-                                            value={mat.precioUnitario}
-                                            onChange={(e) => handleUpdate(idx, 'precioUnitario', Number(e.target.value))}
+                                            value={mat.precioBaseUsd}
+                                            onChange={(e) => handleUpdate(idx, 'precioBaseUsd', Number(e.target.value))}
                                         />
                                     </div>
                                 </td>
@@ -104,7 +130,10 @@ export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => 
                                     </div>
                                 </td>
                                 <td className="px-4 py-2 text-right font-bold text-slate-900 font-mono">
-                                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(mat.subtotal)}
+                                    {fmtUsd(mat.subtotalUsd)}
+                                    <div className="text-[10px] text-slate-400 font-normal">
+                                        {fmtBs(mat.subtotalBs)}
+                                    </div>
                                 </td>
                                 <td className="px-2 py-2 text-center">
                                     <button

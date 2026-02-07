@@ -13,6 +13,7 @@ const ITEMS: SidebarItem[] = [
     { icon: 'inventory_2', label: 'Insumos', view: 'insumos' },
     { icon: 'groups', label: 'Mano de Obra', view: 'mano_obra' },
     { icon: 'agriculture', label: 'Equipos', view: 'equipos' },
+    { icon: 'history', label: 'Versiones', view: 'versiones' },
     { icon: 'settings', label: 'Configuración', view: 'configuracion' },
 ];
 

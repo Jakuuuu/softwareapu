@@ -6,7 +6,7 @@ import { TabEquipos } from './TabEquipos';
 
 export const EditorAPU = () => {
     const { proyectoActual, partidaEditando, setPartidaEditando, actualizarPartida } = useProyectoStore();
-    const [activeTab, setActiveTab] = useState<'Materiales' | 'Manook' | 'Equipos'>('Materiales');
+    const [activeTab, setActiveTab] = useState<'Materiales' | 'ManoObra' | 'Equipos'>('Materiales');
 
     const partida = proyectoActual?.partidas.find(p => p.id === partidaEditando);
 
@@ -19,9 +19,17 @@ export const EditorAPU = () => {
         actualizarPartida(partida.id, { rendimiento: val });
     };
 
-    const currentSubtotal = activeTab === 'Materiales' ? partida.costoMateriales
-        : activeTab === 'Manook' ? partida.costoManoObra
-            : partida.costoEquipos;
+    // Helper for formatting
+    const fmtBs = new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES' }).format;
+    const fmtUsd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format;
+
+    const getSubtotal = () => {
+        if (activeTab === 'Materiales') return { bs: partida.costoMaterialesBs, usd: partida.costoMaterialesUsd };
+        if (activeTab === 'ManoObra') return { bs: partida.costoManoObraBs, usd: partida.costoManoObraUsd };
+        return { bs: partida.costoEquiposBs, usd: partida.costoEquiposUsd }; // Equipos
+    };
+
+    const currentSub = getSubtotal();
 
     return (
         <div className="fixed inset-0 z-50 flex flex-col bg-white">
@@ -51,7 +59,7 @@ export const EditorAPU = () => {
             </header>
 
             {/* Main Scrollable */}
-            <main className="flex-1 overflow-y-auto pb-48 no-scrollbar bg-slate-50/50">
+            <main className="flex-1 overflow-y-auto pb-56 no-scrollbar bg-slate-50/50">
                 <div className="max-w-4xl mx-auto w-full p-4 sm:p-6">
                     {/* Performance Card */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -89,7 +97,7 @@ export const EditorAPU = () => {
                         <div className="flex p-1.5 space-x-1 bg-white border border-gray-200 rounded-xl shadow-sm">
                             {([
                                 { id: 'Materiales', label: 'Materiales', icon: 'category' },
-                                { id: 'Manook', label: 'Mano de Obra', icon: 'engineering' },
+                                { id: 'ManoObra', label: 'Mano de Obra', icon: 'engineering' },
                                 { id: 'Equipos', label: 'Equipos', icon: 'construction' }
                             ] as const).map((tab) => (
                                 <button
@@ -107,9 +115,12 @@ export const EditorAPU = () => {
                         </div>
                         <div className="flex justify-between items-center mt-3 px-2">
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Listado de Recursos</span>
-                            <span className="text-xs font-mono font-medium text-slate-500 bg-white px-2 py-1 rounded border border-gray-100 shadow-sm">
-                                Subtotal: <strong className="text-slate-800">${currentSubtotal.toFixed(2)}</strong>
-                            </span>
+                            <div className="flex flex-col items-end">
+                                <span className="text-xs font-mono font-medium text-slate-500 bg-white px-2 py-1 rounded border border-gray-100 shadow-sm">
+                                    Subtotal: <strong className="text-slate-900">{fmtUsd(currentSub.usd)}</strong>
+                                </span>
+                                <span className="text-[10px] text-slate-400 mt-0.5 px-2">{fmtBs(currentSub.bs)}</span>
+                            </div>
                         </div>
                     </div>
 
@@ -122,7 +133,7 @@ export const EditorAPU = () => {
                             />
                         )}
 
-                        {activeTab === 'Manook' && (
+                        {activeTab === 'ManoObra' && (
                             <TabManoObra
                                 partidaId={partida.id}
                                 manoObra={partida.manoObra}
@@ -148,23 +159,15 @@ export const EditorAPU = () => {
                             <div className="flex flex-col gap-1">
                                 <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Precio Unitario Total</span>
                                 <div className="flex items-baseline gap-2">
-                                    <span className="text-4xl font-black font-mono text-slate-900 tracking-tight">${partida.precioUnitario.toFixed(2)}</span>
+                                    <span className="text-4xl font-black font-mono text-slate-900 tracking-tight">{fmtUsd(partida.precioUnitarioUsd)}</span>
                                     <span className="text-base font-bold text-slate-400">/ {partida.unidadMedida}</span>
                                 </div>
+                                <span className="text-sm font-medium text-slate-500">{fmtBs(partida.precioUnitarioBs)}</span>
                             </div>
-                            <div className="flex flex-col items-end gap-1.5 mb-1 bg-slate-50 p-3 rounded-xl border border-gray-100">
-                                <div className="text-xs font-medium text-slate-600 flex items-center gap-2">
-                                    <span className="size-2 rounded-full bg-blue-500"></span>
-                                    Materiales: <span className="font-mono font-bold">${partida.costoMateriales.toFixed(2)}</span>
-                                </div>
-                                <div className="text-xs font-medium text-slate-600 flex items-center gap-2">
-                                    <span className="size-2 rounded-full bg-amber-500"></span>
-                                    Mano de Obra: <span className="font-mono font-bold">${partida.costoManoObra.toFixed(2)}</span>
-                                </div>
-                                <div className="text-xs font-medium text-slate-600 flex items-center gap-2">
-                                    <span className="size-2 rounded-full bg-emerald-500"></span>
-                                    Equipos: <span className="font-mono font-bold">${partida.costoEquipos.toFixed(2)}</span>
-                                </div>
+                            <div className="flex flex-col items-end gap-1.5 mb-1 bg-slate-50 p-3 rounded-xl border border-gray-100 min-w-[180px]">
+                                <SummaryItem color="bg-blue-500" label="Materiales" valBs={partida.costoMaterialesBs} valUsd={partida.costoMaterialesUsd} />
+                                <SummaryItem color="bg-amber-500" label="Mano de Obra" valBs={partida.costoManoObraBs} valUsd={partida.costoManoObraUsd} />
+                                <SummaryItem color="bg-emerald-500" label="Equipos" valBs={partida.costoEquiposBs} valUsd={partida.costoEquiposUsd} />
                             </div>
                         </div>
                         <button onClick={handleClose} className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
@@ -173,6 +176,22 @@ export const EditorAPU = () => {
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+const SummaryItem = ({ color, label, valBs, valUsd }: { color: string, label: string, valBs: number, valUsd: number }) => {
+    const fmtUsd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format;
+    return (
+        <div className="text-xs font-medium text-slate-600 flex items-center justify-between w-full gap-4">
+            <div className="flex items-center gap-2">
+                <span className={`size-2 rounded-full ${color}`}></span>
+                {label}
+            </div>
+            <div className="text-right">
+                <span className="font-mono font-bold block">{fmtUsd(valUsd)}</span>
+                <span className="text-[10px] text-slate-400 font-mono block">{new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES' }).format(valBs)}</span>
             </div>
         </div>
     );
