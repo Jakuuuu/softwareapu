@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Proyecto, Recurso, Partida, ProjectConfig } from '../types';
+import type { Proyecto, Recurso, Partida, ProjectConfig, Valuacion, Dependencia } from '../types';
 import { CalculadoraAPU } from '../utils/calculos';
 
 interface ProyectoStore {
@@ -33,6 +33,12 @@ interface ProyectoStore {
 
     // Recursos
     agregarRecurso: (recurso: Recurso) => void;
+
+    // Offline Features (Tablet)
+    agregarValuacion: (valuacion: Valuacion) => void;
+    eliminarValuacion: (id: string) => void;
+    agregarDependencia: (dep: Dependencia) => void;
+    eliminarDependencia: (id: string) => void;
 }
 
 const defaultConfig: ProjectConfig = {
@@ -76,7 +82,9 @@ export const useProyectoStore = create<ProyectoStore>()(
                     tipoObra: 'EDIFICACION',
                     config: { ...defaultConfig },
                     fechaCreacion: new Date().toISOString(),
-                    partidas: []
+                    partidas: [],
+                    valuaciones: [],
+                    dependencias: []
                 };
                 set({ proyectoActual: nuevoProyecto, currentView: 'configuracion' });
             },
@@ -244,6 +252,58 @@ export const useProyectoStore = create<ProyectoStore>()(
             agregarRecurso: (recurso) => set((state) => ({
                 recursos: [...state.recursos, recurso]
             })),
+
+            agregarValuacion: (val) => set((state) => {
+                if (!state.proyectoActual) return state;
+                const newProject = {
+                    ...state.proyectoActual,
+                    valuaciones: [...(state.proyectoActual.valuaciones || []), val]
+                };
+                // Auto-save
+                const idx = state.savedProjects.findIndex(p => p.id === newProject.id);
+                const newSaved = [...state.savedProjects];
+                if (idx >= 0) newSaved[idx] = newProject;
+                return { proyectoActual: newProject, savedProjects: idx >= 0 ? newSaved : state.savedProjects };
+            }),
+
+            eliminarValuacion: (id) => set((state) => {
+                if (!state.proyectoActual) return state;
+                const newProject = {
+                    ...state.proyectoActual,
+                    valuaciones: (state.proyectoActual.valuaciones || []).filter(v => v.id !== id)
+                };
+                // Auto-save
+                const idx = state.savedProjects.findIndex(p => p.id === newProject.id);
+                const newSaved = [...state.savedProjects];
+                if (idx >= 0) newSaved[idx] = newProject;
+                return { proyectoActual: newProject, savedProjects: idx >= 0 ? newSaved : state.savedProjects };
+            }),
+
+            agregarDependencia: (dep) => set((state) => {
+                if (!state.proyectoActual) return state;
+                const newProject = {
+                    ...state.proyectoActual,
+                    dependencias: [...(state.proyectoActual.dependencias || []), dep]
+                };
+                // Auto-save
+                const idx = state.savedProjects.findIndex(p => p.id === newProject.id);
+                const newSaved = [...state.savedProjects];
+                if (idx >= 0) newSaved[idx] = newProject;
+                return { proyectoActual: newProject, savedProjects: idx >= 0 ? newSaved : state.savedProjects };
+            }),
+
+            eliminarDependencia: (id) => set((state) => {
+                if (!state.proyectoActual) return state;
+                const newProject = {
+                    ...state.proyectoActual,
+                    dependencias: (state.proyectoActual.dependencias || []).filter(d => d.id !== id)
+                };
+                // Auto-save
+                const idx = state.savedProjects.findIndex(p => p.id === newProject.id);
+                const newSaved = [...state.savedProjects];
+                if (idx >= 0) newSaved[idx] = newProject;
+                return { proyectoActual: newProject, savedProjects: idx >= 0 ? newSaved : state.savedProjects };
+            }),
 
             resetProyecto: () => set({ proyectoActual: null, partidaEditando: null }),
         }),

@@ -3,7 +3,8 @@ import { ConfiguracionProyecto } from './components/ConfiguracionProyecto';
 import { DashboardProyectos } from './components/DashboardProyectos';
 import { ListaPartidas } from './components/ListaPartidas';
 import { EditorAPU } from './components/EditorAPU';
-import { CronogramaView } from './components/CronogramaView'; // Imported correctly
+import { CronogramaView } from './components/CronogramaView';
+import TabValuaciones from './components/TabValuaciones';
 
 import { AppShell } from './components/layout/AppShell';
 import { ResourceSummary } from './components/ResourceSummary';
@@ -93,6 +94,8 @@ function App() {
         return <div className="max-w-4xl mx-auto h-[calc(100vh-140px)]"><ProjectSnapshots /></div>;
       case 'cronograma':
         return <div className="max-w-6xl mx-auto h-[calc(100vh-140px)]"><CronogramaView /></div>;
+      case 'valuaciones':
+        return <div className="max-w-6xl mx-auto"><TabValuaciones /></div>;
       case 'configuracion':
         // Reuse the component but ensure it fits within the shell layout
         return <div className="max-w-4xl mx-auto"><ConfiguracionProyecto /></div>;

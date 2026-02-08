@@ -2,13 +2,21 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 
-# --- Enums (mirrors Typescript) ---
-UnidadMedida = Literal['M2', 'M3', 'ML', 'PZA', 'PTO', 'GLB', 'KG', 'TON']
+# --- Enums (mirrors Typescript & SQLAlchemy) ---
+UnidadMedida = Literal['M2', 'M3', 'ML', 'PZA', 'PTO', 'GLB', 'KG', 'TON', 'UND', 'DIA', 'HORA'] # Extended
 TipoObra = Literal['EDIFICACION', 'VIALIDAD', 'HOSPITAL', 'SIERRA', 'OTRO']
-CategoriaObrero = Literal['MAESTRO', 'OFICIAL', 'AYUDANTE', 'PEON']
-TipoEquipo = Literal['MAQUINARIA_PESADA', 'HERRAMIENTA_MENOR', 'EQUIPO_MENOR']
-FuenteTasa = Literal['BCV_OFICIAL', 'PARALELO', 'MANUAL']
+
+class TipoInsumo(str, Enum):
+    MATERIAL = "MATERIAL"
+    MANO_OBRA = "MANO_OBRA"
+    EQUIPO = "EQUIPO"
+
+class FuenteTasa(str, Enum):
+    BCV_OFICIAL = "BCV_OFICIAL"
+    PARALELO = "PARALELO"
+    MANUAL = "MANUAL"
 
 # --- Shared Models ---
 
@@ -33,109 +41,110 @@ class ProjectConfig(BaseModel):
     administracion: float = 10.0
     fcas: FCASConfig
 
-# --- Resource Models (Items inside APU) ---
+# --- Insumo Models ---
 
-class APUDetalle(BaseModel):
-    recursoId: str
-    nombre: str
-    unidad: Optional[str] = None
-    cantidad: float
-    desperdicio: float = 0.0
-    
-    # Base Prices
-    precioBaseBs: float = 0
-    precioBaseUsd: float = 0
-    tasaCambioAplicada: float = 0
-    
-    # Calculated (Optional in request, creating logic will fill)
-    subtotalBs: float = 0
-    subtotalUsd: float = 0
+class InsumoBase(BaseModel):
+    descripcion: str
+    unidad: str
+    precio_base: float
+    tipo: TipoInsumo
 
-class APUManoObra(BaseModel):
-    recursoId: str
-    nombre: str
-    categoria: CategoriaObrero
-    cantidad: float
-    
-    jornalBaseBs: float = 0
-    jornalBaseUsd: float = 0
-    
-    subtotalBs: float = 0
-    subtotalUsd: float = 0
-
-class APUEquipo(BaseModel):
-    recursoId: str
-    nombre: str
-    tipoEquipo: TipoEquipo
-    cantidad: float
-    
-    costoDiaBs: float = 0
-    costoDiaUsd: float = 0
-    horasPorDia: float = 8.0
-    
-    subtotalBs: float = 0
-    subtotalUsd: float = 0
-
-# --- APU Partida ---
-
-class APUPartida(BaseModel):
-    id: str
-    codigo: str
-    titulo: str
-    descripcion: str = ""
-    unidadMedida: UnidadMedida
-    cantidad: float
-    rendimiento: float
-    capitulo: str = "General"
-    
-    materiales: List[APUDetalle] = []
-    manoObra: List[APUManoObra] = []
-    equipos: List[APUEquipo] = []
-    
-    # Totals
-    costoMaterialesBs: float = 0
-    costoMaterialesUsd: float = 0
-    costoManoObraBs: float = 0
-    costoManoObraUsd: float = 0
-    costoEquiposBs: float = 0
-    costoEquiposUsd: float = 0
-    
-    costoDirectoBs: float = 0
-    costoDirectoUsd: float = 0
-    
-    precioUnitarioBs: float = 0
-    precioUnitarioUsd: float = 0
-    
-    precioTotalBs: float = 0
-    precioTotalUsd: float = 0
-
-# --- Project ---
-
-class ProjectCreate(BaseModel):
-    nombre: str
-    ubicacion: str
-    propietario: str
-    tipoObra: TipoObra
-    tipoObraOtro: Optional[str] = None
-    config: ProjectConfig
-
-class ProjectUpdate(ProjectCreate):
+class InsumoCreate(InsumoBase):
     pass
 
-class ProjectResponse(ProjectCreate):
+class InsumoResponse(InsumoBase):
     id: str
-    fechaCreacion: str
-    partidas: List[APUPartida] = []
-
+    updated_at: Optional[datetime] = None
+    
     class Config:
         from_attributes = True
 
-# --- Calculation Requests ---
+# --- Detalle Models (Receta) ---
 
-class FCASRequest(BaseModel):
-    config: FCASConfig
-    salary_scheme: str = "normal" # placeholder
+class APUDetalleBase(BaseModel):
+    insumo_id: str
+    cantidad: float
+    desperdicio: float = 0.0 # 0.10 for 10%
 
-class APUCalculationRequest(BaseModel):
-    partida: APUPartida
+class APUDetalleCreate(APUDetalleBase):
+    pass
+
+class APUDetalleResponse(APUDetalleBase):
+    id: str
+    # We might want to include nested Insumo data for the frontend
+    # But for now let's keep it simple or use a separate schema with current price
+    
+    class Config:
+        from_attributes = True
+
+# --- Partida Models ---
+
+class APUPartidaBase(BaseModel):
+    codigo: str
+    descripcion: str
+    unidad: str
+    cantidad_total: float = 0
+    rendimiento: float = 1
+    capitulo: Optional[str] = "General"
+
+class APUPartidaCreate(APUPartidaBase):
+    project_id: str
+
+class APUPartidaResponse(APUPartidaBase):
+    id: str
+    project_id: str
+    
+    # Calculated fields
+    duracion_dias: float = 0
+    precio_unitario_usd: float = 0
+    precio_total_usd: float = 0
+    
+    detalles: List[APUDetalleResponse] = []
+    
+    class Config:
+        from_attributes = True
+
+# --- Valuacion Models ---
+
+class ValuacionCreate(BaseModel):
+    partida_id: str
+    fecha: datetime
+    cantidad_periodo: float
+
+class ValuacionResponse(ValuacionCreate):
+    id: str
+    
+    class Config:
+        from_attributes = True
+
+# --- Dependencia Models ---
+
+class DependenciaCreate(BaseModel):
+    project_id: str
+    predecesora_id: str
+    sucesora_id: str
+
+class DependenciaResponse(DependenciaCreate):
+    id: str
+    
+    class Config:
+        from_attributes = True
+
+# --- Project Models ---
+
+class ProjectCreate(BaseModel):
+    name: str # Enforce english naming in DB/Backend consistency (frontend sends nombre -> name mapping if needed, or we adapt)
+    # Actually, let's keep 'nombre' in frontend -> 'name' in backend mapping or just use 'nombre' here if we want to change DB col.
+    # The Model has 'name', let's use 'name' here.
+    location: Optional[str] = None
+    client: Optional[str] = None
     config: ProjectConfig
+    
+class ProjectResponse(ProjectCreate):
+    id: str
+    created_at: datetime
+    partidas: List[APUPartidaResponse] = []
+    
+    class Config:
+        from_attributes = True
+

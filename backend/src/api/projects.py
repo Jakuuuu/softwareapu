@@ -6,7 +6,7 @@ from typing import List
 from uuid import UUID
 
 from src.database import get_db
-from src importmodels, schemas
+from src import models, schemas
 
 router = APIRouter()
 

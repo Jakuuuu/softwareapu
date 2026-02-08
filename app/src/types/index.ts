@@ -37,6 +37,21 @@ export interface Ingeniero {
     cargo?: string; // e.g. "Ingeniero Residente"
 }
 
+export interface Valuacion {
+    id: string;
+    partidaId: string;
+    fecha: string; // ISO Date
+    cantidad: number; // Cantidad ejecutada en este periodo
+    nota?: string;
+}
+
+export interface Dependencia {
+    id: string;
+    predecesoraId: string;
+    sucesoraId: string;
+    tipo: 'FIN_INICIO'; // Por ahora solo soportamos Fin-Inicio
+}
+
 export interface Proyecto {
     id: string;
     nombre: string;
@@ -50,6 +65,11 @@ export interface Proyecto {
 
     fechaCreacion: string;
     partidas: Partida[];
+
+    // New fields for extended functionality (Offline/Tablet support)
+    valuaciones: Valuacion[];
+    dependencias: Dependencia[];
+
     resultados?: {
         costoDirectoBs: number;
         costoDirectoUsd: number;
