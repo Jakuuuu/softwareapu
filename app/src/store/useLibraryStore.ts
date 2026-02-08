@@ -23,7 +23,7 @@ interface LibraryStore {
 
 export const useLibraryStore = create<LibraryStore>()(
     persist(
-        (set, get) => ({
+        (set) => ({
             materiales: [],
             manoObra: [],
             equipos: [],

@@ -4,75 +4,11 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { Proyecto, Partida } from '../types';
+import type { Proyecto } from '../types';
 
-interface ResourceSummary {
-    nombre: string;
-    unidad: string;
-    cantidadTotal: number;
-    costoTotalUsd: number;
-}
 
-const aggregateResources = (partidas: Partida[]) => {
-    const materiales: Record<string, ResourceSummary> = {};
-    const manoObra: Record<string, ResourceSummary> = {};
-    const equipos: Record<string, ResourceSummary> = {};
 
-    partidas.forEach(p => {
-        const partidaCantidad = p.cantidad || 0;
 
-        // Materiales
-        p.materiales.forEach(m => {
-            const key = m.nombre;
-            if (!materiales[key]) {
-                materiales[key] = {
-                    nombre: m.nombre,
-                    unidad: m.unidad,
-                    cantidadTotal: 0,
-                    costoTotalUsd: 0
-                };
-            }
-            materiales[key].cantidadTotal += (m.cantidad * partidaCantidad);
-            materiales[key].costoTotalUsd += (m.subtotalUsd * partidaCantidad);
-        });
-
-        // Mano de Obra
-        p.manoObra.forEach(mo => {
-            const key = mo.nombre;
-            if (!manoObra[key]) {
-                manoObra[key] = {
-                    nombre: mo.nombre,
-                    unidad: 'Jornal',
-                    cantidadTotal: 0,
-                    costoTotalUsd: 0
-                };
-            }
-            manoObra[key].cantidadTotal += (mo.cantidad * partidaCantidad);
-            manoObra[key].costoTotalUsd += (mo.subtotalUsd * partidaCantidad);
-        });
-
-        // Equipos
-        p.equipos.forEach(eq => {
-            const key = eq.nombre;
-            if (!equipos[key]) {
-                equipos[key] = {
-                    nombre: eq.nombre,
-                    unidad: 'Hora/Día',
-                    cantidadTotal: 0,
-                    costoTotalUsd: 0
-                };
-            }
-            equipos[key].cantidadTotal += (eq.cantidad * partidaCantidad);
-            equipos[key].costoTotalUsd += (eq.subtotalUsd * partidaCantidad);
-        });
-    });
-
-    return {
-        materiales: Object.values(materiales).sort((a, b) => b.costoTotalUsd - a.costoTotalUsd),
-        manoObra: Object.values(manoObra).sort((a, b) => b.costoTotalUsd - a.costoTotalUsd),
-        equipos: Object.values(equipos).sort((a, b) => b.costoTotalUsd - a.costoTotalUsd)
-    };
-};
 
 export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
     // 1. Initialize Document
@@ -84,7 +20,6 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
 
     // Helper for formatting currency (USD)
     const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format;
-    const fmtNum = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format;
     const now = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
     const config = proyecto.config;
 
@@ -399,7 +334,7 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
         const sumW = 86;
 
         doc.setDrawColor(200);
-        doc.setFillColor(255);
+        doc.setFillColor(255, 255, 255);
         doc.rect(sumX, y, sumW, 40, 'S');
 
         doc.setFontSize(9);
