@@ -5,6 +5,7 @@ import { ListaPartidas } from './components/ListaPartidas';
 import { EditorAPU } from './components/EditorAPU';
 import { CronogramaView } from './components/CronogramaView';
 import TabValuaciones from './components/TabValuaciones';
+import { LibraryManager } from './components/Library/LibraryManager';
 
 import { AppShell } from './components/layout/AppShell';
 import { ResourceSummary } from './components/ResourceSummary';
@@ -99,6 +100,8 @@ function App() {
       case 'configuracion':
         // Reuse the component but ensure it fits within the shell layout
         return <div className="max-w-4xl mx-auto"><ConfiguracionProyecto /></div>;
+      case 'biblioteca':
+        return <div className="max-w-6xl mx-auto h-[calc(100vh-140px)]"><LibraryManager /></div>;
       default:
         return <ListaPartidas
           onImport={() => fileInputRef.current?.click()}

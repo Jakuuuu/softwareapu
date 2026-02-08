@@ -8,8 +8,9 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    # Fallback/Warning (Should properly handle this in prod)
-    DATABASE_URL = "postgresql+asyncpg://postgres:password@localhost:5432/boostear_db"
+    # Use SQLite for local development/audit without Postgres requirement
+    DATABASE_URL = "sqlite+aiosqlite:///./apu.db"
+    # DATABASE_URL = "postgresql+asyncpg://postgres:password@localhost:5432/boostear_db"
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 

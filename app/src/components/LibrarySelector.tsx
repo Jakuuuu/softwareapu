@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { useLibraryStore, type LibraryItem } from '../store/useLibraryStore';
+import { useProyectoStore } from '../store/useProyectoStore';
+import type { Recurso, TipoRecurso } from '../types';
 
 interface LibrarySelectorProps {
-    tipo: LibraryItem['tipo'];
-    onSelect: (item: LibraryItem) => void;
+    tipo: TipoRecurso;
+    onSelect: (item: Recurso) => void;
     onClose: () => void;
 }
 
 export const LibrarySelector = ({ tipo, onSelect, onClose }: LibrarySelectorProps) => {
-    const store = useLibraryStore();
-    const items = tipo === 'MATERIAL' ? store.materiales :
-        tipo === 'MANO_OBRA' ? store.manoObra : store.equipos;
+    const { recursos } = useProyectoStore();
+    const items = recursos.filter(r => r.tipo === tipo);
 
     const [search, setSearch] = useState('');
 
@@ -62,7 +62,7 @@ export const LibrarySelector = ({ tipo, onSelect, onClose }: LibrarySelectorProp
                                     <div className="font-semibold text-slate-700">{item.nombre}</div>
                                     <div className="text-xs text-slate-400 flex items-center gap-2">
                                         <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">{item.unidad}</span>
-                                        <span>${item.precioBaseUsd.toFixed(2)}</span>
+                                        <span>${item.costoUsd.toFixed(2)}</span>
                                     </div>
                                 </div>
                                 <span className="material-symbols-outlined text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">add_circle</span>

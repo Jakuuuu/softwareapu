@@ -43,6 +43,9 @@ class ProjectConfig(BaseModel):
 
 # --- Insumo Models ---
 
+
+# --- Insumo Models ---
+
 class InsumoBase(BaseModel):
     descripcion: str
     unidad: str
@@ -50,7 +53,7 @@ class InsumoBase(BaseModel):
     tipo: TipoInsumo
 
 class InsumoCreate(InsumoBase):
-    pass
+    id: Optional[str] = None # Allow frontend to provide ID
 
 class InsumoResponse(InsumoBase):
     id: str
@@ -60,72 +63,86 @@ class InsumoResponse(InsumoBase):
         from_attributes = True
 
 # --- Detalle Models (Receta) ---
+# Used for internal mapping, but frontend sends specific shapes
 
 class APUDetalleBase(BaseModel):
     insumo_id: str
     cantidad: float
-    desperdicio: float = 0.0 # 0.10 for 10%
+    desperdicio: float = 0.0
 
 class APUDetalleCreate(APUDetalleBase):
     pass
 
 class APUDetalleResponse(APUDetalleBase):
     id: str
-    # We might want to include nested Insumo data for the frontend
-    # But for now let's keep it simple or use a separate schema with current price
-    
     class Config:
         from_attributes = True
 
-# --- Partida Models ---
+# --- Partida Complex Input Models (Matching Frontend) ---
 
-class APUPartidaBase(BaseModel):
-    codigo: str
-    descripcion: str
+class MaterialPartidaInput(BaseModel):
+    recursoId: str
+    nombre: str
     unidad: str
-    cantidad_total: float = 0
-    rendimiento: float = 1
-    capitulo: Optional[str] = "General"
+    cantidad: float
+    desperdicio: float
+    precioBaseUsd: float
+    # We can ignore calculated fields like subtotalBs for input, backend re-calcs or stores as is
 
+class ManoObraPartidaInput(BaseModel):
+    recursoId: str
+    nombre: str
+    cantidad: float # Cantidad de personas
+    jornalBaseUsd: float
+    # categoria: ... if needed
+
+class EquipoPartidaInput(BaseModel):
+    recursoId: str
+    nombre: str
+    tipoEquipo: str
+    cantidad: float
+    costoDiaUsd: float
+    
 class APUPartidaCreate(APUPartidaBase):
-    project_id: str
+    # Overwrite/Extend base to include nested lists
+    project_id: Optional[str] = None
+    
+    materiales: List[MaterialPartidaInput] = []
+    manoObra: List[ManoObraPartidaInput] = []
+    equipos: List[EquipoPartidaInput] = []
+
+    # Receive calculated totals from frontend to ensure exact match?
+    # Or let backend recalc? For persistence, trusting frontend snapshot is safer for "Save/Load" fidelity.
+    costoMaterialesUsd: float = 0
+    costoManoObraUsd: float = 0
+    costoEquiposUsd: float = 0
+    precioTotalUsd: float = 0
+    # ... add Bs fields if needed, but USD is main
+    
+
+class MaterialPartidaResponse(MaterialPartidaInput):
+    # Include calculated fields if needed, or just base fields
+    pass
+
+class ManoObraPartidaResponse(ManoObraPartidaInput):
+    pass
+
+class EquipoPartidaResponse(EquipoPartidaInput):
+    pass
 
 class APUPartidaResponse(APUPartidaBase):
     id: str
     project_id: str
     
-    # Calculated fields
-    duracion_dias: float = 0
-    precio_unitario_usd: float = 0
+    costo_materiales_usd: float = 0
+    costo_mano_obra_usd: float = 0
+    costo_equipos_usd: float = 0
     precio_total_usd: float = 0
     
-    detalles: List[APUDetalleResponse] = []
-    
-    class Config:
-        from_attributes = True
-
-# --- Valuacion Models ---
-
-class ValuacionCreate(BaseModel):
-    partida_id: str
-    fecha: datetime
-    cantidad_periodo: float
-
-class ValuacionResponse(ValuacionCreate):
-    id: str
-    
-    class Config:
-        from_attributes = True
-
-# --- Dependencia Models ---
-
-class DependenciaCreate(BaseModel):
-    project_id: str
-    predecesora_id: str
-    sucesora_id: str
-
-class DependenciaResponse(DependenciaCreate):
-    id: str
+    # Nested response matching frontend
+    materiales: List[MaterialPartidaResponse] = []
+    manoObra: List[ManoObraPartidaResponse] = []
+    equipos: List[EquipoPartidaResponse] = []
     
     class Config:
         from_attributes = True
@@ -133,18 +150,30 @@ class DependenciaResponse(DependenciaCreate):
 # --- Project Models ---
 
 class ProjectCreate(BaseModel):
-    name: str # Enforce english naming in DB/Backend consistency (frontend sends nombre -> name mapping if needed, or we adapt)
-    # Actually, let's keep 'nombre' in frontend -> 'name' in backend mapping or just use 'nombre' here if we want to change DB col.
-    # The Model has 'name', let's use 'name' here.
-    location: Optional[str] = None
-    client: Optional[str] = None
+    id: Optional[str] = None
+    nombre: str 
+    ubicacion: Optional[str] = None
+    propietario: Optional[str] = None
     config: ProjectConfig
     
-class ProjectResponse(ProjectCreate):
+    # Nested Data
+    partidas: List[APUPartidaCreate] = []
+    
+    # If we want to upsert resources:
+    recursos: List[InsumoCreate] = []
+
+class ProjectResponse(BaseModel):
     id: str
-    created_at: datetime
+    name: str # Mapped from nombre
+    location: Optional[str]
+    client: Optional[str]
+    config: ProjectConfig
+    created_at: Optional[datetime] = None
+    
     partidas: List[APUPartidaResponse] = []
     
     class Config:
         from_attributes = True
+
+
 

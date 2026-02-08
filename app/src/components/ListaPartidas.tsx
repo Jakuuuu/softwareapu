@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useProyectoStore } from '../store/useProyectoStore';
 import type { Partida } from '../types';
 import { APUDataGrid } from './APUDataGrid';
+import { CoveninSelector } from './CoveninSelector';
 
 // --- Sub-components (Inline for valid single-file export) ---
 
@@ -77,6 +78,7 @@ export const ListaPartidas = ({ onImport, onReport }: { onImport?: () => void, o
     const { proyectoActual, agregarPartida, setPartidaEditando, eliminarPartida } = useProyectoStore();
     const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list'); // New state
+    const [showCovenin, setShowCovenin] = useState(false);
 
     // Formatting Helpers
     const fmtBs = new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES' }).format;
@@ -137,6 +139,33 @@ export const ListaPartidas = ({ onImport, onReport }: { onImport?: () => void, o
         };
         agregarPartida(nuevaPartida);
         setPartidaEditando(nuevaPartida.id);
+    };
+
+    const handleCoveninSelect = (item: import('../data/covenin').CoveninEntry) => {
+        const nuevaPartida: Partida = {
+            id: crypto.randomUUID(),
+            codigo: item.codigo,
+            titulo: item.descripcion.length > 50 ? item.descripcion.substring(0, 50) + '...' : item.descripcion,
+            descripcion: item.descripcion,
+            unidadMedida: item.unidad as import('../types').UnidadMedida,
+            cantidad: 1,
+            rendimiento: item.rendimientoDia || 1,
+            capitulo: 'General', // Could infer from code?
+
+            materiales: [],
+            manoObra: [],
+            equipos: [],
+
+            costoMaterialesBs: 0, costoMaterialesUsd: 0,
+            costoManoObraBs: 0, costoManoObraUsd: 0,
+            costoEquiposBs: 0, costoEquiposUsd: 0,
+            costoDirectoBs: 0, costoDirectoUsd: 0,
+            precioUnitarioBs: 0, precioUnitarioUsd: 0,
+            precioTotalBs: 0, precioTotalUsd: 0
+        };
+        agregarPartida(nuevaPartida);
+        setPartidaEditando(nuevaPartida.id);
+        setShowCovenin(false);
     };
 
     // Calculations (Totals)
@@ -208,6 +237,7 @@ export const ListaPartidas = ({ onImport, onReport }: { onImport?: () => void, o
 
                     <div className="flex gap-2">
                         <ActionButton icon="add" label="Crear" active onClick={handleNuevaPartida} />
+                        <ActionButton icon="menu_book" label="Catálogo" onClick={() => setShowCovenin(true)} />
                         <ActionButton icon="download" label="Importar" onClick={onImport} />
                         <ActionButton icon="description" label="Reporte" onClick={onReport} />
                     </div>
@@ -278,6 +308,13 @@ export const ListaPartidas = ({ onImport, onReport }: { onImport?: () => void, o
                     </div>
                 </div>
             </footer>
+
+            {showCovenin && (
+                <CoveninSelector
+                    onSelect={handleCoveninSelect}
+                    onClose={() => setShowCovenin(false)}
+                />
+            )}
         </div>
     );
 };

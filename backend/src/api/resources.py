@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from typing import List
+from typing import List, Optional
+
 from src.database import get_db
 from src import models, schemas
 import uuid
@@ -9,13 +10,30 @@ import uuid
 router = APIRouter()
 
 @router.get("/", response_model=List[schemas.InsumoResponse])
-async def read_insumos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    result = await db.execute(select(models.Insumo).offset(skip).limit(limit))
+async def read_insumos(
+    skip: int = 0, 
+    limit: int = 100, 
+    q: str = None, 
+    tipo: schemas.TipoInsumo = None,
+    db: AsyncSession = Depends(get_db)
+):
+    query = select(models.Insumo)
+    
+    if q:
+        # Case insensitive search
+        query = query.where(models.Insumo.descripcion.ilike(f"%{q}%"))
+    
+    if tipo:
+        query = query.where(models.Insumo.tipo == tipo)
+        
+    query = query.offset(skip).limit(limit)
+    
+    result = await db.execute(query)
     insumos = result.scalars().all()
     return insumos
 
 @router.post("/", response_model=schemas.InsumoResponse)
-async def create_insumo(insumo: schemas.InsumoCreate, db: Session = Depends(get_db)):
+async def create_insumo(insumo: schemas.InsumoCreate, db: AsyncSession = Depends(get_db)):
     db_insumo = models.Insumo(**insumo.dict())
     db.add(db_insumo)
     await db.commit()
@@ -23,7 +41,7 @@ async def create_insumo(insumo: schemas.InsumoCreate, db: Session = Depends(get_
     return db_insumo
 
 @router.put("/{insumo_id}", response_model=schemas.InsumoResponse)
-async def update_insumo(insumo_id: str, insumo: schemas.InsumoCreate, db: Session = Depends(get_db)):
+async def update_insumo(insumo_id: str, insumo: schemas.InsumoCreate, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Insumo).where(models.Insumo.id == insumo_id))
     db_insumo = result.scalar_one_or_none()
     
@@ -38,7 +56,7 @@ async def update_insumo(insumo_id: str, insumo: schemas.InsumoCreate, db: Sessio
     return db_insumo
 
 @router.delete("/{insumo_id}")
-async def delete_insumo(insumo_id: str, db: Session = Depends(get_db)):
+async def delete_insumo(insumo_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Insumo).where(models.Insumo.id == insumo_id))
     db_insumo = result.scalar_one_or_none()
     

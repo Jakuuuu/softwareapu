@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useProyectoStore } from '../store/useProyectoStore';
 import type { EquipoPartida } from '../types';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
+import { LibrarySelector } from './LibrarySelector';
 
 interface TabEquiposProps {
     partidaId: string;
@@ -9,8 +11,9 @@ interface TabEquiposProps {
 }
 
 export const TabEquipos = ({ partidaId, equipos }: TabEquiposProps) => {
-    const { actualizarPartida, proyectoActual } = useProyectoStore();
+    const { actualizarPartida, proyectoActual, agregarRecurso } = useProyectoStore();
     const config = proyectoActual?.config;
+    const [showLibrary, setShowLibrary] = useState(false);
 
     // Helper for currency formatting
     const fmtUsd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format;
@@ -47,6 +50,36 @@ export const TabEquipos = ({ partidaId, equipos }: TabEquiposProps) => {
         actualizarPartida(partidaId, { equipos: [...equipos, nuevo] });
     };
 
+    const agregarDesdeLibreria = (item: import('../types').Recurso) => {
+        const nuevo: EquipoPartida = {
+            recursoId: crypto.randomUUID(),
+            nombre: item.nombre,
+            tipoEquipo: 'MAQUINARIA_PESADA', // Default, maybe should infer
+            costoDiaBs: item.costoUsd * (config?.tasaCambio || 0),
+            costoDiaUsd: item.costoUsd,
+            horasPorDia: 8,
+            cantidad: 1,
+            subtotalBs: 0,
+            subtotalUsd: 0
+        };
+        actualizarPartida(partidaId, { equipos: [...equipos, nuevo] });
+        setShowLibrary(false);
+    };
+
+    const guardarEnLibreria = (eq: EquipoPartida) => {
+        agregarRecurso({
+            id: crypto.randomUUID(),
+            nombre: eq.nombre,
+            unidad: 'DIA',
+            costoUsd: eq.costoDiaUsd,
+            costoBs: eq.costoDiaBs,
+            tipo: 'EQUIPO',
+            fechaPrecio: new Date().toISOString(),
+            ultimaActualizacion: new Date().toISOString()
+        });
+        alert('Equipo guardado en la biblioteca.');
+    };
+
     const eliminarEquipo = (index: number) => {
         const updated = equipos.filter((_, i) => i !== index);
         actualizarPartida(partidaId, { equipos: updated });
@@ -63,7 +96,7 @@ export const TabEquipos = ({ partidaId, equipos }: TabEquiposProps) => {
                             <th className="px-2 py-3 text-right w-24 font-semibold text-xs uppercase tracking-wider text-slate-500">$/Día</th>
                             <th className="px-2 py-3 text-right w-20 font-semibold text-xs uppercase tracking-wider text-slate-500">Cant.</th>
                             <th className="px-4 py-3 text-right w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Subtotal</th>
-                            <th className="px-2 py-3 w-12"></th>
+                            <th className="px-2 py-3 w-12 w-20 text-center font-semibold text-xs uppercase tracking-wider text-slate-500">Acciones</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -119,10 +152,18 @@ export const TabEquipos = ({ partidaId, equipos }: TabEquiposProps) => {
                                         {fmtBs(eq.subtotalBs)}
                                     </div>
                                 </td>
-                                <td className="px-2 py-2 text-center">
+                                <td className="px-2 py-2 text-center flex items-center justify-center gap-1">
+                                    <button
+                                        onClick={() => guardarEnLibreria(eq)}
+                                        className="size-8 flex items-center justify-center rounded-full text-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all transform hover:scale-110"
+                                        title="Guardar en Biblioteca"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">bookmark_add</span>
+                                    </button>
                                     <button
                                         onClick={() => eliminarEquipo(idx)}
                                         className="size-8 flex items-center justify-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
+                                        title="Eliminar"
                                     >
                                         <span className="material-symbols-outlined text-[18px]">delete</span>
                                     </button>
@@ -132,13 +173,28 @@ export const TabEquipos = ({ partidaId, equipos }: TabEquiposProps) => {
                     </tbody>
                 </table>
             </div>
-            <Button onClick={agregarEquipo} variant="secondary" className="w-full border-dashed border-2">
-                + Agregar Equipo
-            </Button>
+
+            <div className="flex gap-3">
+                <Button onClick={agregarEquipo} variant="secondary" className="flex-1 border-dashed border-2 justify-center">
+                    + Agregar Equipo Vacio
+                </Button>
+                <Button onClick={() => setShowLibrary(true)} variant="primary" className="flex-1 justify-center gap-2">
+                    <span className="material-symbols-outlined">agriculture</span>
+                    Importar de Biblioteca
+                </Button>
+            </div>
 
             <div className="bg-blue-50 p-3 rounded text-sm text-blue-800">
                 ℹ️ <b>Nota:</b> Recuerda que el COP (Costo de Operación y Posesión) se expresa por DÍA.
             </div>
+
+            {showLibrary && (
+                <LibrarySelector
+                    tipo="EQUIPO"
+                    onSelect={agregarDesdeLibreria}
+                    onClose={() => setShowLibrary(false)}
+                />
+            )}
         </div>
     );
 };

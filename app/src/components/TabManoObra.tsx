@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useProyectoStore } from '../store/useProyectoStore';
 import type { ManoObraPartida } from '../types';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
+import { LibrarySelector } from './LibrarySelector';
 
 interface TabManoObraProps {
     partidaId: string;
@@ -9,8 +11,9 @@ interface TabManoObraProps {
 }
 
 export const TabManoObra = ({ partidaId, manoObra }: TabManoObraProps) => {
-    const { actualizarPartida, proyectoActual } = useProyectoStore();
+    const { actualizarPartida, proyectoActual, agregarRecurso } = useProyectoStore();
     const config = proyectoActual?.config;
+    const [showLibrary, setShowLibrary] = useState(false);
 
     // Helper for currency formatting
     const fmtUsd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format;
@@ -48,6 +51,36 @@ export const TabManoObra = ({ partidaId, manoObra }: TabManoObraProps) => {
         actualizarPartida(partidaId, { manoObra: [...manoObra, nuevo] });
     };
 
+    const agregarDesdeLibreria = (item: import('../types').Recurso) => {
+        const nuevo: ManoObraPartida = {
+            recursoId: crypto.randomUUID(),
+            nombre: item.nombre,
+            categoria: item.categoria || 'PEON',
+            cantidad: 1,
+            jornalBaseBs: item.costoUsd * (config?.tasaCambio || 0),
+            jornalBaseUsd: item.costoUsd,
+            subtotalBs: 0,
+            subtotalUsd: 0
+        };
+        actualizarPartida(partidaId, { manoObra: [...manoObra, nuevo] });
+        setShowLibrary(false);
+    };
+
+    const guardarEnLibreria = (mo: ManoObraPartida) => {
+        agregarRecurso({
+            id: crypto.randomUUID(),
+            nombre: mo.nombre,
+            unidad: 'JORNAL', // Implicit for Labor
+            costoUsd: mo.jornalBaseUsd,
+            costoBs: mo.jornalBaseBs,
+            tipo: 'MANO_OBRA',
+            categoria: mo.categoria,
+            fechaPrecio: new Date().toISOString(),
+            ultimaActualizacion: new Date().toISOString()
+        });
+        alert('Mano de Obra guardada en la biblioteca.');
+    };
+
     const eliminarObrero = (index: number) => {
         const updated = manoObra.filter((_, i) => i !== index);
         actualizarPartida(partidaId, { manoObra: updated });
@@ -63,7 +96,7 @@ export const TabManoObra = ({ partidaId, manoObra }: TabManoObraProps) => {
                             <th className="px-2 py-3 text-right w-24 font-semibold text-xs uppercase tracking-wider text-slate-500">Cant.</th>
                             <th className="px-2 py-3 text-right w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Jornal (USD)</th>
                             <th className="px-4 py-3 text-right w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Total</th>
-                            <th className="px-2 py-3 w-12"></th>
+                            <th className="px-2 py-3 w-12 w-20 text-center font-semibold text-xs uppercase tracking-wider text-slate-500">Acciones</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -120,10 +153,18 @@ export const TabManoObra = ({ partidaId, manoObra }: TabManoObraProps) => {
                                         {fmtBs(mo.subtotalBs)}
                                     </div>
                                 </td>
-                                <td className="px-2 py-2 text-center">
+                                <td className="px-2 py-2 text-center flex items-center justify-center gap-1">
+                                    <button
+                                        onClick={() => guardarEnLibreria(mo)}
+                                        className="size-8 flex items-center justify-center rounded-full text-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all transform hover:scale-110"
+                                        title="Guardar en Biblioteca"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">bookmark_add</span>
+                                    </button>
                                     <button
                                         onClick={() => eliminarObrero(idx)}
-                                        className="size-8 flex items-center justify-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
+                                        className="size-8 flex items-center justify-center rounded-full text-gray-300 hover:text-red-600 hover:bg-red-50 transition-all transform hover:scale-110"
+                                        title="Eliminar"
                                     >
                                         <span className="material-symbols-outlined text-[18px]">delete</span>
                                     </button>
@@ -133,14 +174,29 @@ export const TabManoObra = ({ partidaId, manoObra }: TabManoObraProps) => {
                     </tbody>
                 </table>
             </div>
-            <Button onClick={agregarObrero} variant="secondary" className="w-full border-dashed border-2">
-                + Agregar Trabajador
-            </Button>
+
+            <div className="flex gap-3">
+                <Button onClick={agregarObrero} variant="secondary" className="flex-1 border-dashed border-2 justify-center">
+                    + Nuevo Trabajador
+                </Button>
+                <Button onClick={() => setShowLibrary(true)} variant="primary" className="flex-1 justify-center gap-2">
+                    <span className="material-symbols-outlined">groups</span>
+                    Importar de Biblioteca
+                </Button>
+            </div>
 
             <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
                 <span className="material-symbols-outlined text-sm">info</span>
                 <span>El cálculo incluye FCAS ({config?.fcas.factorTotal}%) sobre el Salario Base.</span>
             </div>
+
+            {showLibrary && (
+                <LibrarySelector
+                    tipo="MANO_OBRA"
+                    onSelect={agregarDesdeLibreria}
+                    onClose={() => setShowLibrary(false)}
+                />
+            )}
         </div>
     );
 };

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useProyectoStore } from '../store/useProyectoStore';
-import { useLibraryStore } from '../store/useLibraryStore';
+
 import type { MaterialPartida } from '../types';
 import { Button } from './ui/Button';
 import { LibrarySelector } from './LibrarySelector';
@@ -11,8 +11,7 @@ interface TabMaterialesProps {
 }
 
 export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => {
-    const { actualizarPartida, proyectoActual } = useProyectoStore();
-    const library = useLibraryStore();
+    const { actualizarPartida, proyectoActual, agregarRecurso } = useProyectoStore();
     const config = proyectoActual?.config;
     const [showLibrary, setShowLibrary] = useState(false);
 
@@ -48,15 +47,15 @@ export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => 
         actualizarPartida(partidaId, { materiales: [...materiales, nuevo] });
     };
 
-    const agregarDesdeLibreria = (item: import('../store/useLibraryStore').LibraryItem) => {
+    const agregarDesdeLibreria = (item: import('../types').Recurso) => {
         const nuevo: MaterialPartida = {
             recursoId: crypto.randomUUID(),
             nombre: item.nombre,
             unidad: item.unidad,
             cantidad: 1,
-            desperdicio: 5,
-            precioBaseBs: item.precioBaseUsd * (config?.tasaCambio || 0),
-            precioBaseUsd: item.precioBaseUsd,
+            desperdicio: item.desperdicioPorDefecto || 5,
+            precioBaseBs: item.costoUsd * (config?.tasaCambio || 0),
+            precioBaseUsd: item.costoUsd,
             tasaCambioAplicada: config?.tasaCambio || 0,
             subtotalBs: 0,
             subtotalUsd: 0
@@ -66,12 +65,16 @@ export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => 
     };
 
     const guardarEnLibreria = (mat: MaterialPartida) => {
-        library.addItem({
+        agregarRecurso({
+            id: crypto.randomUUID(),
             nombre: mat.nombre,
             unidad: mat.unidad,
-            precioBaseUsd: mat.precioBaseUsd,
+            costoUsd: mat.precioBaseUsd,
+            costoBs: mat.precioBaseBs,
             tipo: 'MATERIAL',
-            tags: []
+            fechaPrecio: new Date().toISOString(),
+            ultimaActualizacion: new Date().toISOString(),
+            desperdicioPorDefecto: mat.desperdicio
         });
         alert('Material guardado en la biblioteca.');
     };

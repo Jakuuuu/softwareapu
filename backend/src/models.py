@@ -142,3 +142,21 @@ class Dependencia(Base):
     project = relationship("Project", back_populates="dependencias")
     predecesora = relationship("APUPartida", foreign_keys=[predecesora_id], back_populates="sucesoras")
     sucesora = relationship("APUPartida", foreign_keys=[sucesora_id], back_populates="predecesoras")
+
+class CoveninPartida(Base):
+    """
+    Catalogo de obras COVENIN (Norma Venezolana)
+    Used for lookups/autocomplete.
+    """
+    __tablename__ = "covenin_partidas"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    codigo = Column(String(50), nullable=False, unique=True, index=True)
+    descripcion = Column(Text, nullable=False)
+    unidad = Column(String(20), nullable=False)
+    
+    # Defaults helpful for APU creation
+    rendimiento_base = Column(DECIMAL(18,4), default=1)
+    
+    # Can add typical price range or complexity factor if available
+

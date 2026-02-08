@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.api import calculations, projects, resources, construction
+from src.api import calculations, projects, resources, construction, covenin
 
 app = FastAPI(title="Calculadora APU Backend", version="1.0.0")
 
@@ -17,6 +17,7 @@ app.include_router(calculations.router, prefix="/api/v1/calculations", tags=["Ca
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["Projects"])
 app.include_router(resources.router, prefix="/api/v1/insumos", tags=["Insumos (Resources)"])
 app.include_router(construction.router, prefix="/api/v1/construction", tags=["Construction (Billing & Schedule)"])
+app.include_router(covenin.router, prefix="/api/v1/covenin", tags=["COVENIN Catalog"])
 
 @app.get("/health")
 def health_check():

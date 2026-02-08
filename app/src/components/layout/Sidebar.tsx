@@ -14,6 +14,7 @@ interface SidebarItem {
 const ITEMS: SidebarItem[] = [
     { icon: 'dashboard', label: 'Dashboard', view: 'dashboard' },
     { icon: 'format_list_bulleted', label: 'Presupuesto', view: 'presupuesto' },
+    { icon: 'library_books', label: 'Biblioteca Global', view: 'biblioteca' },
     { icon: 'inventory_2', label: 'Insumos', view: 'insumos' },
     { icon: 'groups', label: 'Mano de Obra', view: 'mano_obra' },
     { icon: 'agriculture', label: 'Equipos', view: 'equipos' },

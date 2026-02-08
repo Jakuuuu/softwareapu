@@ -1,4 +1,4 @@
-export type UnidadMedida = 'M2' | 'M3' | 'ML' | 'PZA' | 'PTO' | 'GLB' | 'KG' | 'TON';
+export type UnidadMedida = 'M2' | 'M3' | 'ML' | 'PZA' | 'PTO' | 'GLB' | 'KG' | 'TON' | 'KGF' | 'UND';
 export type TipoObra = 'EDIFICACION' | 'VIALIDAD' | 'HOSPITAL' | 'SIERRA' | 'OTRO';
 export type CategoriaObrero = 'MAESTRO' | 'OFICIAL' | 'AYUDANTE' | 'PEON';
 export type TipoEquipo = 'MAQUINARIA_PESADA' | 'HERRAMIENTA_MENOR' | 'EQUIPO_MENOR';

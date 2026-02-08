@@ -1,7 +1,28 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
+import { openDB } from 'idb';
 import type { Proyecto, Recurso, Partida, ProjectConfig, Valuacion, Dependencia } from '../types';
 import { CalculadoraAPU } from '../utils/calculos';
+
+// Configuración de IndexedDB
+const dbPromise = openDB('apu-db', 1, {
+    upgrade(db) {
+        db.createObjectStore('store');
+    },
+});
+
+const idbStorage: StateStorage = {
+    getItem: async (name: string): Promise<string | null> => {
+        const val = await (await dbPromise).get('store', name);
+        return val || null;
+    },
+    setItem: async (name: string, value: string): Promise<void> => {
+        await (await dbPromise).put('store', value, name);
+    },
+    removeItem: async (name: string): Promise<void> => {
+        await (await dbPromise).delete('store', name);
+    },
+};
 
 interface ProyectoStore {
     // Estado
@@ -309,16 +330,14 @@ export const useProyectoStore = create<ProyectoStore>()(
         }),
         {
             name: 'apu-storage',
+            storage: createJSONStorage(() => idbStorage),
             partialize: (state) => ({
-                savedProjects: state.savedProjects, // Now we persist the list
-                // We don't persist proyectoActual or currentView to force dashboard on load? 
-                // Or maybe we do? Let's persist current project for convenience, but maybe not view if it causes issues.
-                // Let's persist everything for now.
+                savedProjects: state.savedProjects,
                 proyectoActual: state.proyectoActual,
                 recursos: state.recursos,
                 currentView: state.currentView
             }),
-            version: 4, // Bump version
+            version: 4,
             migrate: (persistedState: any, version) => {
                 if (version < 4) {
                     return {
