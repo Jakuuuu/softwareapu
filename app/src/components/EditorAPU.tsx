@@ -52,7 +52,13 @@ export const EditorAPU = () => {
                                 <span className="text-slate-300 text-xs">|</span>
                                 <span className="text-sm font-medium text-slate-500">Unidad: <strong className="text-slate-700">{partida.unidadMedida}</strong></span>
                             </div>
-                            <h1 className="text-2xl font-bold text-slate-900 leading-tight">{partida.titulo}</h1>
+                            <input
+                                className="block w-full border-0 p-0 text-2xl font-bold text-slate-900 leading-tight placeholder:text-gray-300 focus:ring-0 bg-transparent"
+                                type="text"
+                                value={partida.titulo}
+                                onChange={(e) => actualizarPartida(partida.id, { titulo: e.target.value })}
+                                placeholder="Nombre de la Partida"
+                            />
                         </div>
                     </div>
                 </div>
