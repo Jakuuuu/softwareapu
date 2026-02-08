@@ -1,6 +1,6 @@
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
-import { type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 interface AppShellProps {
     children: ReactNode;
@@ -10,19 +10,26 @@ interface AppShellProps {
 }
 
 export const AppShell = ({ children, onExportPDF, onExportJSON, onImportJSON }: AppShellProps) => {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
     return (
-        <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex">
-            {/* Sidebar */}
-            <Sidebar />
+        <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col relative overflow-hidden">
+            {/* Sidebar (Overlay) */}
+            <Sidebar
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
+            />
 
             {/* Main Content Area */}
-            <div className="flex-1 ml-20 md:ml-64 transition-all duration-300 flex flex-col min-h-screen">
+            {/* Note: No margin-left anymore, as sidebar is overlay */}
+            <div className="flex-1 flex flex-col min-h-screen transition-all duration-300 w-full">
                 <Header
                     onExportPDF={onExportPDF}
                     onExportJSON={onExportJSON}
                     onImportJSON={onImportJSON}
+                    onToggleSidebar={() => setIsSidebarOpen(true)}
                 />
-                <main className="flex-1 p-6 overflow-auto">
+                <main className="flex-1 p-4 md:p-8 overflow-auto max-w-[1600px] w-full mx-auto">
                     {children}
                 </main>
             </div>

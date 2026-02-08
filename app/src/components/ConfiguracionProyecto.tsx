@@ -315,6 +315,13 @@ export const ConfiguracionProyecto = () => {
                                     </div>
                                 </div>
                             </div>
+                            <div className="mt-3 bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-start gap-3">
+                                <span className="material-symbols-outlined text-blue-500 mt-0.5 text-lg">info</span>
+                                <p className="text-xs text-blue-800 leading-relaxed">
+                                    <strong>¿Qué son estos días?</strong> Se utilizan para el cálculo del <strong>Factor de Costos Asociados al Salario (FCAS)</strong>.
+                                    Afectan directamente el costo real de la mano de obra, considerando los beneficios de ley (utilidades, vacaciones, feriados) que recibe el trabajador.
+                                </p>
+                            </div>
                         </section>
 
                     </div>
