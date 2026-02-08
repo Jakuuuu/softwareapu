@@ -3,35 +3,36 @@ import { persist } from 'zustand/middleware';
 import type { Proyecto, Recurso, Partida, ProjectConfig } from '../types';
 import { CalculadoraAPU } from '../utils/calculos';
 
-// Estado
-savedProjects: Proyecto[];
-proyectoActual: Proyecto | null;
-recursos: Recurso[];
-partidaEditando: string | null;
-currentView: string;
+interface ProyectoStore {
+    // Estado
+    savedProjects: Proyecto[];
+    proyectoActual: Proyecto | null;
+    recursos: Recurso[];
+    partidaEditando: string | null;
+    currentView: string;
 
-// Acciones
-setProyecto: (proyecto: Proyecto) => void;
-crearProyecto: (nombre: string) => void;
-guardarProyecto: () => void;
-cargarProyecto: (id: string) => void;
-eliminarProyecto: (id: string) => void;
-cerrarProyecto: () => void;
+    // Acciones
+    setProyecto: (proyecto: Proyecto) => void;
+    crearProyecto: (nombre: string) => void;
+    guardarProyecto: () => void;
+    cargarProyecto: (id: string) => void;
+    eliminarProyecto: (id: string) => void;
+    cerrarProyecto: () => void;
 
-agregarPartida: (partida: Partida) => void;
-actualizarPartida: (id: string, cambios: Partial<Partida>) => void;
-eliminarPartida: (id: string) => void;
-setPartidaEditando: (id: string | null) => void;
-setCurrentView: (view: string) => void;
-resetProyecto: () => void;
+    agregarPartida: (partida: Partida) => void;
+    actualizarPartida: (id: string, cambios: Partial<Partida>) => void;
+    eliminarPartida: (id: string) => void;
+    setPartidaEditando: (id: string | null) => void;
+    setCurrentView: (view: string) => void;
+    resetProyecto: () => void;
 
-// Configuración
-actualizarConfiguracion: (config: Partial<ProjectConfig>) => void;
-actualizarProyecto: (cambios: Partial<Proyecto>) => void;
-recalcularProyecto: () => void;
+    // Configuración
+    actualizarConfiguracion: (config: Partial<ProjectConfig>) => void;
+    actualizarProyecto: (cambios: Partial<Proyecto>) => void;
+    recalcularProyecto: () => void;
 
-// Recursos
-agregarRecurso: (recurso: Recurso) => void;
+    // Recursos
+    agregarRecurso: (recurso: Recurso) => void;
 }
 
 const defaultConfig: ProjectConfig = {
@@ -244,7 +245,7 @@ export const useProyectoStore = create<ProyectoStore>()(
                 recursos: [...state.recursos, recurso]
             })),
 
-            resetProyecto: () => set({ projetoActual: null, partidaEditando: null }),
+            resetProyecto: () => set({ proyectoActual: null, partidaEditando: null }),
         }),
         {
             name: 'apu-storage',
