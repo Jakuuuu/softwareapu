@@ -90,7 +90,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 </nav>
 
                 {/* Footer / Config */}
-                <div className="absolute bottom-0 w-full p-4 border-t border-white/10 bg-black/20 backdrop-blur-sm">
+                <div className="absolute bottom-0 w-full p-4 border-t border-white/10 bg-black/20 backdrop-blur-sm space-y-2">
                     <button
                         onClick={() => handleNavigation('configuracion')}
                         className={`w-full flex items-center px-4 py-3 rounded-xl transition-all duration-200 group ${currentView === 'configuracion'
@@ -105,7 +105,18 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                         </div>
                     </button>
 
-                    <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-slate-500">
+                    <button
+                        onClick={() => {
+                            useProyectoStore.getState().cerrarProyecto();
+                            onClose();
+                        }}
+                        className="w-full flex items-center px-4 py-2 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all group"
+                    >
+                        <span className="material-symbols-outlined text-[20px] group-hover:text-red-400">logout</span>
+                        <span className="ml-3 text-xs font-medium uppercase tracking-wider">Cerrar Proyecto</span>
+                    </button>
+
+                    <div className="mt-2 flex items-center justify-center gap-2 text-[10px] text-slate-500">
                         <span>v1.0.0</span>
                     </div>
                 </div>

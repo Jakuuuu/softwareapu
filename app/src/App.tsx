@@ -1,5 +1,6 @@
 import { useProyectoStore } from './store/useProyectoStore';
 import { ConfiguracionProyecto } from './components/ConfiguracionProyecto';
+import { DashboardProyectos } from './components/DashboardProyectos';
 import { ListaPartidas } from './components/ListaPartidas';
 import { EditorAPU } from './components/EditorAPU';
 import { CronogramaView } from './components/CronogramaView'; // Imported correctly
@@ -54,10 +55,15 @@ function App() {
     }
   };
 
-  // 1. Landing / Config Screen (Full Screen)
-  // If no project is loaded, strictly show the Landing Config
+  // 1. Landing / Dashboard Logic
+  // If we have no saved projects and no current project, it might be first run. 
+  // But Dashboard handles empty state gracefully. 
+  // If no project is loaded (proyectoActual is null), show Dashboard.
   if (!proyectoActual) {
-    return <ConfiguracionProyecto />;
+    if (currentView === 'configuracion') {
+      return <ConfiguracionProyecto />;
+    }
+    return <DashboardProyectos />;
   }
 
   // 2. Main App Logic

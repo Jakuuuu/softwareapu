@@ -3,30 +3,35 @@ import { persist } from 'zustand/middleware';
 import type { Proyecto, Recurso, Partida, ProjectConfig } from '../types';
 import { CalculadoraAPU } from '../utils/calculos';
 
-interface ProyectoStore {
-    // Estado
-    proyectoActual: Proyecto | null;
-    recursos: Recurso[];
-    partidaEditando: string | null;
-    currentView: string;
+// Estado
+savedProjects: Proyecto[];
+proyectoActual: Proyecto | null;
+recursos: Recurso[];
+partidaEditando: string | null;
+currentView: string;
 
-    // Acciones
-    setProyecto: (proyecto: Proyecto) => void;
-    crearProyecto: (nombre: string) => void;
-    agregarPartida: (partida: Partida) => void;
-    actualizarPartida: (id: string, cambios: Partial<Partida>) => void;
-    eliminarPartida: (id: string) => void;
-    setPartidaEditando: (id: string | null) => void;
-    setCurrentView: (view: string) => void;
-    resetProyecto: () => void;
+// Acciones
+setProyecto: (proyecto: Proyecto) => void;
+crearProyecto: (nombre: string) => void;
+guardarProyecto: () => void;
+cargarProyecto: (id: string) => void;
+eliminarProyecto: (id: string) => void;
+cerrarProyecto: () => void;
 
-    // Configuración
-    actualizarConfiguracion: (config: Partial<ProjectConfig>) => void;
-    actualizarProyecto: (cambios: Partial<Proyecto>) => void;
-    recalcularProyecto: () => void;
+agregarPartida: (partida: Partida) => void;
+actualizarPartida: (id: string, cambios: Partial<Partida>) => void;
+eliminarPartida: (id: string) => void;
+setPartidaEditando: (id: string | null) => void;
+setCurrentView: (view: string) => void;
+resetProyecto: () => void;
 
-    // Recursos
-    agregarRecurso: (recurso: Recurso) => void;
+// Configuración
+actualizarConfiguracion: (config: Partial<ProjectConfig>) => void;
+actualizarProyecto: (cambios: Partial<Proyecto>) => void;
+recalcularProyecto: () => void;
+
+// Recursos
+agregarRecurso: (recurso: Recurso) => void;
 }
 
 const defaultConfig: ProjectConfig = {
@@ -53,10 +58,11 @@ const defaultConfig: ProjectConfig = {
 export const useProyectoStore = create<ProyectoStore>()(
     persist(
         (set, get) => ({
+            savedProjects: [],
             proyectoActual: null,
             recursos: [],
             partidaEditando: null,
-            currentView: 'presupuesto',
+            currentView: 'dashboard', // Default start view
 
             setProyecto: (proyecto) => set({ proyectoActual: proyecto }),
 
@@ -71,19 +77,58 @@ export const useProyectoStore = create<ProyectoStore>()(
                     fechaCreacion: new Date().toISOString(),
                     partidas: []
                 };
-                set({ proyectoActual: nuevoProyecto });
+                set({ proyectoActual: nuevoProyecto, currentView: 'configuracion' });
             },
+
+            guardarProyecto: () => set((state) => {
+                if (!state.proyectoActual) return state;
+                const updated = state.proyectoActual;
+
+                // Check if exists
+                const index = state.savedProjects.findIndex(p => p.id === updated.id);
+                let newSaved = [...state.savedProjects];
+
+                if (index >= 0) {
+                    newSaved[index] = updated;
+                } else {
+                    newSaved.push(updated);
+                }
+
+                return { savedProjects: newSaved, proyectoActual: updated };
+            }),
+
+            cargarProyecto: (id) => set((state) => {
+                const found = state.savedProjects.find(p => p.id === id);
+                if (found) {
+                    return { proyectoActual: found, currentView: 'presupuesto' };
+                }
+                return state;
+            }),
+
+            eliminarProyecto: (id) => set((state) => ({
+                savedProjects: state.savedProjects.filter(p => p.id !== id),
+                proyectoActual: state.proyectoActual?.id === id ? null : state.proyectoActual
+            })),
+
+            cerrarProyecto: () => set({ proyectoActual: null, currentView: 'dashboard' }),
 
             setPartidaEditando: (id) => set({ partidaEditando: id }),
             setCurrentView: (view) => set({ currentView: view }),
 
             agregarPartida: (partida) => set((state) => {
                 if (!state.proyectoActual) return state;
+                const newProject = {
+                    ...state.proyectoActual,
+                    partidas: [...state.proyectoActual.partidas, partida]
+                };
+                // Auto-save to list
+                const idx = state.savedProjects.findIndex(p => p.id === newProject.id);
+                const newSaved = [...state.savedProjects];
+                if (idx >= 0) newSaved[idx] = newProject;
+
                 return {
-                    proyectoActual: {
-                        ...state.proyectoActual,
-                        partidas: [...state.proyectoActual.partidas, partida]
-                    }
+                    proyectoActual: newProject,
+                    savedProjects: idx >= 0 ? newSaved : state.savedProjects
                 };
             }),
 
@@ -92,33 +137,43 @@ export const useProyectoStore = create<ProyectoStore>()(
 
                 const partidasActualizadas = state.proyectoActual.partidas.map((p) => {
                     if (p.id !== id) return p;
-
-                    // Unir cambios preliminares
                     const partidaConCambios = { ...p, ...cambios };
-
-                    // Recalcular costos automáticamente
-                    // IMPORTANTE: Pasamos la config completa del proyecto
                     return CalculadoraAPU.actualizarPartida(
                         partidaConCambios,
                         state.proyectoActual!.config
                     );
                 });
 
+                const newProject = {
+                    ...state.proyectoActual,
+                    partidas: partidasActualizadas
+                };
+
+                // Auto-save
+                const idx = state.savedProjects.findIndex(p => p.id === newProject.id);
+                const newSaved = [...state.savedProjects];
+                if (idx >= 0) newSaved[idx] = newProject;
+
                 return {
-                    proyectoActual: {
-                        ...state.proyectoActual,
-                        partidas: partidasActualizadas
-                    }
+                    proyectoActual: newProject,
+                    savedProjects: idx >= 0 ? newSaved : state.savedProjects
                 };
             }),
 
             eliminarPartida: (id) => set((state) => {
                 if (!state.proyectoActual) return state;
+                const newProject = {
+                    ...state.proyectoActual,
+                    partidas: state.proyectoActual.partidas.filter(p => p.id !== id)
+                };
+                // Auto-save
+                const idx = state.savedProjects.findIndex(p => p.id === newProject.id);
+                const newSaved = [...state.savedProjects];
+                if (idx >= 0) newSaved[idx] = newProject;
+
                 return {
-                    proyectoActual: {
-                        ...state.proyectoActual,
-                        partidas: state.proyectoActual.partidas.filter(p => p.id !== id)
-                    }
+                    proyectoActual: newProject,
+                    savedProjects: idx >= 0 ? newSaved : state.savedProjects
                 };
             }),
 
@@ -128,24 +183,37 @@ export const useProyectoStore = create<ProyectoStore>()(
 
                 const nuevaConfig = { ...state.proyectoActual.config, ...cambiosConfig };
 
-                // Al actualizar config, debemos recalcular TODAS las partidas
                 const partidasRecalculadas = state.proyectoActual.partidas.map(p =>
                     CalculadoraAPU.actualizarPartida(p, nuevaConfig)
                 );
 
+                const newProject = {
+                    ...state.proyectoActual,
+                    config: nuevaConfig,
+                    partidas: partidasRecalculadas
+                };
+                // Auto-save
+                const idx = state.savedProjects.findIndex(p => p.id === newProject.id);
+                const newSaved = [...state.savedProjects];
+                if (idx >= 0) newSaved[idx] = newProject;
+
                 set({
-                    proyectoActual: {
-                        ...state.proyectoActual,
-                        config: nuevaConfig,
-                        partidas: partidasRecalculadas
-                    }
+                    proyectoActual: newProject,
+                    savedProjects: idx >= 0 ? newSaved : state.savedProjects
                 });
             },
 
             actualizarProyecto: (cambios) => set((state) => {
                 if (!state.proyectoActual) return state;
+                const newProject = { ...state.proyectoActual, ...cambios };
+                // Auto-save
+                const idx = state.savedProjects.findIndex(p => p.id === newProject.id);
+                const newSaved = [...state.savedProjects];
+                if (idx >= 0) newSaved[idx] = newProject;
+
                 return {
-                    proyectoActual: { ...state.proyectoActual, ...cambios }
+                    proyectoActual: newProject,
+                    savedProjects: idx >= 0 ? newSaved : state.savedProjects
                 };
             }),
 
@@ -157,11 +225,18 @@ export const useProyectoStore = create<ProyectoStore>()(
                     CalculadoraAPU.actualizarPartida(p, state.proyectoActual!.config)
                 );
 
+                const newProject = {
+                    ...state.proyectoActual,
+                    partidas: partidasRecalculadas
+                };
+                // Auto-save
+                const idx = state.savedProjects.findIndex(p => p.id === newProject.id);
+                const newSaved = [...state.savedProjects];
+                if (idx >= 0) newSaved[idx] = newProject;
+
                 set({
-                    proyectoActual: {
-                        ...state.proyectoActual,
-                        partidas: partidasRecalculadas
-                    }
+                    proyectoActual: newProject,
+                    savedProjects: idx >= 0 ? newSaved : state.savedProjects
                 });
             },
 
@@ -169,19 +244,28 @@ export const useProyectoStore = create<ProyectoStore>()(
                 recursos: [...state.recursos, recurso]
             })),
 
-            resetProyecto: () => set({ proyectoActual: null, partidaEditando: null }),
+            resetProyecto: () => set({ projetoActual: null, partidaEditando: null }),
         }),
         {
             name: 'apu-storage',
             partialize: (state) => ({
+                savedProjects: state.savedProjects, // Now we persist the list
+                // We don't persist proyectoActual or currentView to force dashboard on load? 
+                // Or maybe we do? Let's persist current project for convenience, but maybe not view if it causes issues.
+                // Let's persist everything for now.
                 proyectoActual: state.proyectoActual,
                 recursos: state.recursos,
                 currentView: state.currentView
             }),
-            version: 3,
+            version: 4, // Bump version
             migrate: (persistedState: any, version) => {
-                if (version < 3) {
-                    return { proyectoActual: null, recursos: [] };
+                if (version < 4) {
+                    return {
+                        savedProjects: persistedState.proyectoActual ? [persistedState.proyectoActual] : [],
+                        proyectoActual: null,
+                        recursos: persistedState.recursos || [],
+                        currentView: 'dashboard'
+                    };
                 }
                 return persistedState;
             },

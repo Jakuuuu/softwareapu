@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { useProyectoStore } from '../store/useProyectoStore';
+import { useLibraryStore } from '../store/useLibraryStore';
 import type { MaterialPartida } from '../types';
 import { Button } from './ui/Button';
+import { LibrarySelector } from './LibrarySelector';
 
 interface TabMaterialesProps {
     partidaId: string;
@@ -9,7 +12,9 @@ interface TabMaterialesProps {
 
 export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => {
     const { actualizarPartida, proyectoActual } = useProyectoStore();
+    const library = useLibraryStore();
     const config = proyectoActual?.config;
+    const [showLibrary, setShowLibrary] = useState(false);
 
     // Helper for currency formatting
     const fmtUsd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format;
@@ -18,17 +23,6 @@ export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => 
     const handleUpdate = (index: number, field: keyof MaterialPartida, value: number | string) => {
         const updatedMateriales = [...materiales];
         updatedMateriales[index] = { ...updatedMateriales[index], [field]: value };
-
-        // Internal recalculation for immediate UI feedback (simulating the store logic)
-        // Ideally the store should handle this via CalculadoraAPU but we can do a quick update here
-        // to prevent UI jumpiness before the store updates. 
-        // Although the store 'actualizarPartida' calls CalculadoraAPU, so we just send the raw change.
-
-        // However, if we change 'precioBaseUsd', we might want to auto-update 'precioBaseBs' based on rate?
-        // Or vice-versa?
-        // For now, let's assume inputs are independent or handled by the store calculation if we pass the change.
-        // But the store calculates SUBTOTALS, not the Unit Prices in other currency (unless we enforce it).
-        // Let's implement a simple rule: if USD changes, BS updates based on rate.
 
         if (field === 'precioBaseUsd' && config) {
             const val = Number(value);
@@ -45,15 +39,41 @@ export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => 
             unidad: 'UND',
             cantidad: 1,
             desperdicio: 5,
-
             precioBaseBs: 0,
             precioBaseUsd: 0,
             tasaCambioAplicada: config?.tasaCambio || 0,
-
             subtotalBs: 0,
             subtotalUsd: 0
         };
         actualizarPartida(partidaId, { materiales: [...materiales, nuevo] });
+    };
+
+    const agregarDesdeLibreria = (item: import('../store/useLibraryStore').LibraryItem) => {
+        const nuevo: MaterialPartida = {
+            recursoId: crypto.randomUUID(),
+            nombre: item.nombre,
+            unidad: item.unidad,
+            cantidad: 1,
+            desperdicio: 5,
+            precioBaseBs: item.precioBaseUsd * (config?.tasaCambio || 0),
+            precioBaseUsd: item.precioBaseUsd,
+            tasaCambioAplicada: config?.tasaCambio || 0,
+            subtotalBs: 0,
+            subtotalUsd: 0
+        };
+        actualizarPartida(partidaId, { materiales: [...materiales, nuevo] });
+        setShowLibrary(false);
+    };
+
+    const guardarEnLibreria = (mat: MaterialPartida) => {
+        library.addItem({
+            nombre: mat.nombre,
+            unidad: mat.unidad,
+            precioBaseUsd: mat.precioBaseUsd,
+            tipo: 'MATERIAL',
+            tags: []
+        });
+        alert('Material guardado en la biblioteca.');
     };
 
     const eliminarMaterial = (index: number) => {
@@ -63,6 +83,23 @@ export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => 
 
     return (
         <div className="space-y-4">
+
+            {/* Explanatory Note */}
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-start gap-3">
+                <span className="material-symbols-outlined text-amber-500 mt-0.5 text-lg">lightbulb</span>
+                <div className="text-xs text-amber-800 leading-relaxed">
+                    <strong>¿Cómo se calcula el Costo Unitario?</strong>
+                    <br />
+                    El costo que ves totalizado aquí es por una unidad de la Partida actual.
+                    <br />
+                    <span className="font-mono bg-white/50 px-1 rounded text-amber-900 mt-1 inline-block border border-amber-200">
+                        Costo = Precio Material × Cantidad × (1 + % Desperdicio)
+                    </span>
+                    <br className="mt-1" />
+                    La <em>Cantidad</em> aquí es cuánto material gastas para hacer **1 unidad** de la Partida.
+                </div>
+            </div>
+
             <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm bg-white">
                 <table className="w-full text-sm">
                     <thead className="bg-gray-50/50 text-gray-700 border-b border-gray-200">
@@ -73,7 +110,7 @@ export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => 
                             <th className="px-2 py-3 text-right w-24 font-semibold text-xs uppercase tracking-wider text-slate-500">Cant.</th>
                             <th className="px-2 py-3 text-right w-24 font-semibold text-xs uppercase tracking-wider text-slate-500">Desp %</th>
                             <th className="px-4 py-3 text-right w-32 font-semibold text-xs uppercase tracking-wider text-slate-500">Total</th>
-                            <th className="px-2 py-3 w-12"></th>
+                            <th className="px-2 py-3 w-20 text-center font-semibold text-xs uppercase tracking-wider text-slate-500">Acciones</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -135,10 +172,17 @@ export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => 
                                         {fmtBs(mat.subtotalBs)}
                                     </div>
                                 </td>
-                                <td className="px-2 py-2 text-center">
+                                <td className="px-2 py-2 text-center flex items-center justify-center gap-1">
+                                    <button
+                                        onClick={() => guardarEnLibreria(mat)}
+                                        className="size-8 flex items-center justify-center rounded-full text-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all transform hover:scale-110"
+                                        title="Guardar en Biblioteca"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">bookmark_add</span>
+                                    </button>
                                     <button
                                         onClick={() => eliminarMaterial(idx)}
-                                        className="size-8 flex items-center justify-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
+                                        className="size-8 flex items-center justify-center rounded-full text-gray-300 hover:text-red-600 hover:bg-red-50 transition-all transform hover:scale-110"
                                         title="Eliminar recurso"
                                     >
                                         <span className="material-symbols-outlined text-[18px]">delete</span>
@@ -149,9 +193,24 @@ export const TabMateriales = ({ partidaId, materiales }: TabMaterialesProps) => 
                     </tbody>
                 </table>
             </div>
-            <Button onClick={agregarMaterial} variant="secondary" className="w-full border-dashed border-2">
-                + Agregar Material
-            </Button>
+
+            <div className="flex gap-3">
+                <Button onClick={agregarMaterial} variant="secondary" className="flex-1 border-dashed border-2 justify-center">
+                    + Nuevo Material Vacio
+                </Button>
+                <Button onClick={() => setShowLibrary(true)} variant="primary" className="flex-1 justify-center gap-2">
+                    <span className="material-symbols-outlined">auto_stories</span>
+                    Importar de Biblioteca
+                </Button>
+            </div>
+
+            {showLibrary && (
+                <LibrarySelector
+                    tipo="MATERIAL"
+                    onSelect={agregarDesdeLibreria}
+                    onClose={() => setShowLibrary(false)}
+                />
+            )}
         </div>
     );
 };
