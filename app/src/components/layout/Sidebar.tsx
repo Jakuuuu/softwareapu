@@ -14,6 +14,7 @@ const ITEMS: SidebarItem[] = [
     { icon: 'groups', label: 'Mano de Obra', view: 'mano_obra' },
     { icon: 'agriculture', label: 'Equipos', view: 'equipos' },
     { icon: 'history', label: 'Versiones', view: 'versiones' },
+    { icon: 'calendar_month', label: 'Cronograma', view: 'cronograma' },
     { icon: 'settings', label: 'Configuración', view: 'configuracion' },
 ];
 

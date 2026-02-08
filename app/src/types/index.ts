@@ -31,11 +31,18 @@ export interface ProjectConfig {
     };
 }
 
+export interface Ingeniero {
+    nombre: string;
+    civ: string; // Colegio de Ingenieros de Venezuela ID
+    cargo?: string; // e.g. "Ingeniero Residente"
+}
+
 export interface Proyecto {
     id: string;
     nombre: string;
     ubicacion: string;
     propietario: string;
+    ingeniero?: Ingeniero;
     tipoObra: TipoObra;
     tipoObraOtro?: string;
 

@@ -6,6 +6,11 @@ type FormValues = {
     nombre: string;
     ubicacion: string;
     propietario: string;
+    // Ingeniero
+    ingNombre: string;
+    ingCiv: string;
+    ingCargo: string;
+    // Obra
     tipoObra: TipoObra;
     tipoObraOtro?: string;
     iva: number;
@@ -28,6 +33,9 @@ export const ConfiguracionProyecto = () => {
             nombre: proyectoActual?.nombre || '',
             ubicacion: proyectoActual?.ubicacion || '',
             propietario: proyectoActual?.propietario || '',
+            ingNombre: proyectoActual?.ingeniero?.nombre || '',
+            ingCiv: proyectoActual?.ingeniero?.civ || '',
+            ingCargo: proyectoActual?.ingeniero?.cargo || 'Ingeniero Residente',
             tipoObra: proyectoActual?.tipoObra || 'EDIFICACION',
             tipoObraOtro: proyectoActual?.tipoObraOtro || '',
             iva: proyectoActual?.config.iva || 16,
@@ -62,6 +70,11 @@ export const ConfiguracionProyecto = () => {
             nombre: data.nombre,
             ubicacion: data.ubicacion,
             propietario: data.propietario,
+            ingeniero: {
+                nombre: data.ingNombre,
+                civ: data.ingCiv,
+                cargo: data.ingCargo
+            },
             tipoObra: data.tipoObra,
             tipoObraOtro: data.tipoObra === 'OTRO' ? data.tipoObraOtro : undefined,
             config: {
@@ -175,6 +188,40 @@ export const ConfiguracionProyecto = () => {
                                         />
                                         <span className="material-symbols-outlined absolute right-3 top-3 text-slate-400">person</span>
                                     </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* SECTION 1.5: ENGINEER / RESPONSIBLE */}
+                        <section className="space-y-5">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                <span className="w-8 h-[1px] bg-slate-300"></span> Datos del Responsable
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-semibold text-slate-700">Nombre del Ingeniero</label>
+                                    <input
+                                        {...register('ingNombre')}
+                                        className="w-full h-12 px-4 rounded-xl bg-slate-50 border-slate-200 border focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-medium placeholder:text-slate-400"
+                                        placeholder="Ing. Juan Pérez"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-semibold text-slate-700">C.I.V.</label>
+                                    <input
+                                        {...register('ingCiv')}
+                                        className="w-full h-12 px-4 rounded-xl bg-slate-50 border-slate-200 border focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-medium placeholder:text-slate-400"
+                                        placeholder="000.000"
+                                    />
+                                </div>
+                                <div className="space-y-1.5 md:col-span-2">
+                                    <label className="text-sm font-semibold text-slate-700">Cargo</label>
+                                    <input
+                                        {...register('ingCargo')}
+                                        className="w-full h-12 px-4 rounded-xl bg-slate-50 border-slate-200 border focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-medium placeholder:text-slate-400"
+                                        placeholder="Ingeniero Residente"
+                                    />
                                 </div>
                             </div>
                         </section>

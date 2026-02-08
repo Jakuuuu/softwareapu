@@ -2,6 +2,7 @@ import { useProyectoStore } from './store/useProyectoStore';
 import { ConfiguracionProyecto } from './components/ConfiguracionProyecto';
 import { ListaPartidas } from './components/ListaPartidas';
 import { EditorAPU } from './components/EditorAPU';
+import { CronogramaView } from './components/CronogramaView'; // Imported correctly
 
 import { AppShell } from './components/layout/AppShell';
 import { ResourceSummary } from './components/ResourceSummary';
@@ -84,10 +85,10 @@ function App() {
         return <ResourceSummary type="equipos" title="Resumen de Equipos" />;
       case 'versiones':
         return <div className="max-w-4xl mx-auto h-[calc(100vh-140px)]"><ProjectSnapshots /></div>;
+      case 'cronograma':
+        return <div className="max-w-6xl mx-auto h-[calc(100vh-140px)]"><CronogramaView /></div>;
       case 'configuracion':
         // Reuse the component but ensure it fits within the shell layout
-        // Note: The new design is full screen, so it might look a bit different inside
-        // a container, but it's responsive so it should be fine.
         return <div className="max-w-4xl mx-auto"><ConfiguracionProyecto /></div>;
       default:
         return <ListaPartidas
