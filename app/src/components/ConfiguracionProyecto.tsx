@@ -93,6 +93,8 @@ export const ConfiguracionProyecto = () => {
             },
             fechaCreacion: proyectoActual?.fechaCreacion || new Date().toISOString(),
             partidas: proyectoActual?.partidas || [],
+            valuaciones: proyectoActual?.valuaciones || [],
+            dependencias: proyectoActual?.dependencias || [],
         };
         setProyecto(nuevoProyecto);
         setCurrentView('presupuesto');
