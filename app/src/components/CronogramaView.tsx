@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useProyectoStore } from "../store/useProyectoStore";
-import { calcularCronograma, GanttTask } from "../utils/schedule";
+import { calcularCronograma } from "../utils/schedule";
 
 export const CronogramaView = () => {
     const { proyectoActual } = useProyectoStore();

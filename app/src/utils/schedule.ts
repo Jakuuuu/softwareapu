@@ -1,4 +1,4 @@
-import type { Proyecto, Partida } from '../types';
+import type { Partida } from '../types';
 
 export interface GanttTask {
     id: string;
