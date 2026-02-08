@@ -3,7 +3,77 @@ import autoTable from 'jspdf-autotable';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
-import type { Proyecto } from '../types';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { Proyecto, Partida } from '../types';
+
+interface ResourceSummary {
+    nombre: string;
+    unidad: string;
+    cantidadTotal: number;
+    costoTotalUsd: number;
+}
+
+const aggregateResources = (partidas: Partida[]) => {
+    const materiales: Record<string, ResourceSummary> = {};
+    const manoObra: Record<string, ResourceSummary> = {};
+    const equipos: Record<string, ResourceSummary> = {};
+
+    partidas.forEach(p => {
+        const partidaCantidad = p.cantidad || 0;
+
+        // Materiales
+        p.materiales.forEach(m => {
+            const key = m.nombre; // Group by name for clearer output
+            if (!materiales[key]) {
+                materiales[key] = {
+                    nombre: m.nombre,
+                    unidad: m.unidad,
+                    cantidadTotal: 0,
+                    costoTotalUsd: 0
+                };
+            }
+            materiales[key].cantidadTotal += (m.cantidad * partidaCantidad);
+            // subtotalUsd is unit cost with waste. Total = UnitCost * PartidaQuantity
+            materiales[key].costoTotalUsd += (m.subtotalUsd * partidaCantidad);
+        });
+
+        // Mano de Obra
+        p.manoObra.forEach(mo => {
+            const key = mo.nombre;
+            if (!manoObra[key]) {
+                manoObra[key] = {
+                    nombre: mo.nombre,
+                    unidad: 'Jornal', // Usually Jornal/Day
+                    cantidadTotal: 0,
+                    costoTotalUsd: 0
+                };
+            }
+            manoObra[key].cantidadTotal += (mo.cantidad * partidaCantidad);
+            manoObra[key].costoTotalUsd += (mo.subtotalUsd * partidaCantidad);
+        });
+
+        // Equipos
+        p.equipos.forEach(eq => {
+            const key = eq.nombre;
+            if (!equipos[key]) {
+                equipos[key] = {
+                    nombre: eq.nombre,
+                    unidad: 'Hora/Día',
+                    cantidadTotal: 0,
+                    costoTotalUsd: 0
+                };
+            }
+            equipos[key].cantidadTotal += (eq.cantidad * partidaCantidad);
+            equipos[key].costoTotalUsd += (eq.subtotalUsd * partidaCantidad);
+        });
+    });
+
+    return {
+        materiales: Object.values(materiales).sort((a, b) => b.costoTotalUsd - a.costoTotalUsd),
+        manoObra: Object.values(manoObra).sort((a, b) => b.costoTotalUsd - a.costoTotalUsd),
+        equipos: Object.values(equipos).sort((a, b) => b.costoTotalUsd - a.costoTotalUsd)
+    };
+};
 
 export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
     // 1. Initialize Document
@@ -15,6 +85,7 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
 
     // Helper for formatting currency (USD)
     const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format;
+    const fmtNum = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format;
     const now = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
     const config = proyecto.config;
 
@@ -22,11 +93,11 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 58, 138); // Blue 900
-    doc.text('CALCULADORA CONTROL INTEGRAL', 105, 15, { align: 'center' });
+    doc.text('CALCULADORA APU SOFTWARE', 105, 15, { align: 'center' });
 
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text('PRESUPUESTO DE OBRA (USD)', 105, 23, { align: 'center' });
+    doc.text('PRESUPUESTO DE OBRA', 105, 23, { align: 'center' });
 
     doc.setDrawColor(200, 200, 200);
     doc.line(14, 26, 196, 26);
@@ -115,13 +186,139 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
         margin: { top: 30, left: 14, right: 14 }
     });
 
-    // 6. ECONOMIC SUMMARY (Footer)
+    // 6. RESOURCE SUMMARIES
+    const resources = aggregateResources(proyecto.partidas || []);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    let lastY = (doc as any).lastAutoTable.finalY + 10;
 
-    // Check if we need a new page
-    if (finalY > 240) {
+    // Helper for page breaks
+    const checkPageBreak = (heightNeeded: number = 30) => {
+        if (lastY + heightNeeded > 270) {
+            doc.addPage();
+            lastY = 20;
+            return true;
+        }
+        return false;
+    };
+
+    // --- MATERIALES ---
+    if (resources.materiales.length > 0) {
+        checkPageBreak();
+
+        doc.setFontSize(12);
+        doc.setTextColor(30, 58, 138); // Blue 900
+        doc.setFont('helvetica', 'bold');
+        doc.text('RESUMEN DE MATERIALES', 14, lastY);
+
+        // Draw underline
+        doc.setDrawColor(30, 58, 138);
+        doc.line(14, lastY + 2, 70, lastY + 2);
+
+        autoTable(doc, {
+            startY: lastY + 5,
+            head: [['DESCRIPCIÓN', 'UND', 'CANTIDAD TOTAL', 'COSTO TOTAL ($)']],
+            body: resources.materiales.map(m => [
+                m.nombre,
+                m.unidad,
+                fmtNum(m.cantidadTotal),
+                fmt(m.costoTotalUsd)
+            ]),
+            theme: 'striped',
+            headStyles: {
+                fillColor: [30, 58, 138], // Blue 900
+                textColor: 255,
+                fontSize: 9,
+                fontStyle: 'bold'
+            },
+            columnStyles: {
+                2: { halign: 'center' },
+                3: { halign: 'right', fontStyle: 'bold' }
+            }
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        lastY = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // --- MANO DE OBRA ---
+    if (resources.manoObra.length > 0) {
+        checkPageBreak();
+
+        doc.setFontSize(12);
+        doc.setTextColor(30, 58, 138);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RESUMEN DE MANO DE OBRA', 14, lastY);
+
+        doc.setDrawColor(30, 58, 138);
+        doc.line(14, lastY + 2, 75, lastY + 2);
+
+        autoTable(doc, {
+            startY: lastY + 5,
+            head: [['CARGO / DESCRIPCIÓN', 'CANTIDAD (Jornales)', 'COSTO TOTAL ($)']],
+            body: resources.manoObra.map(m => [
+                m.nombre,
+                fmtNum(m.cantidadTotal),
+                fmt(m.costoTotalUsd)
+            ]),
+            theme: 'striped',
+            headStyles: {
+                fillColor: [30, 58, 138], // Blue 900
+                textColor: 255,
+                fontSize: 9,
+                fontStyle: 'bold'
+            },
+            columnStyles: {
+                1: { halign: 'center' },
+                2: { halign: 'right', fontStyle: 'bold' }
+            }
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        lastY = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // --- EQUIPOS ---
+    if (resources.equipos.length > 0) {
+        checkPageBreak();
+
+        doc.setFontSize(12);
+        doc.setTextColor(30, 58, 138);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RESUMEN DE EQUIPOS', 14, lastY);
+
+        doc.setDrawColor(30, 58, 138);
+        doc.line(14, lastY + 2, 65, lastY + 2);
+
+        autoTable(doc, {
+            startY: lastY + 5,
+            head: [['DESCRIPCIÓN', 'CANTIDAD (Horas)', 'COSTO TOTAL ($)']],
+            body: resources.equipos.map(m => [
+                m.nombre,
+                fmtNum(m.cantidadTotal),
+                fmt(m.costoTotalUsd)
+            ]),
+            theme: 'striped',
+            headStyles: {
+                fillColor: [30, 58, 138], // Blue 900
+                textColor: 255,
+                fontSize: 9,
+                fontStyle: 'bold'
+            },
+            columnStyles: {
+                1: { halign: 'center' },
+                2: { halign: 'right', fontStyle: 'bold' }
+            }
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        lastY = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+
+    // 7. ECONOMIC SUMMARY (Total)
+    // Always add a new page for the summary if it doesn't fit mostly
+    if (lastY > 180) {
         doc.addPage();
+        lastY = 30;
+    } else {
+        lastY += 10;
     }
 
     // Calculate totals (Using USD fields)
@@ -132,9 +329,7 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
     const costoDirectoTotal = totalMateriales + totalManoObra + totalEquipos;
 
     // Recalculate global factors based on total direct cost
-    // Assuming standard cascade:
     const adminTotal = costoDirectoTotal * (config.administracion / 100);
-    // Utility usually on MD + Admin or MD? Let's assume MD + Admin for max
     const sub1 = costoDirectoTotal + adminTotal;
     const utilidadTotal = sub1 * (config.utilidad / 100);
 
@@ -142,60 +337,61 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
     const ivaTotal = subtotal * (config.iva / 100);
     const granTotal = subtotal + ivaTotal;
 
-    const summaryX = 110;
-    const summaryHeight = 60;
-
-    let sumY = finalY;
-    if (sumY + summaryHeight > 270) {
-        doc.addPage();
-        sumY = 20;
-    }
+    const summaryX = 60; // Centered box
+    const summaryWidth = 90;
+    let sumY = lastY;
 
     // Draw Summary Box
     doc.setDrawColor(200);
-    doc.setFillColor(255, 255, 255);
-    doc.rect(summaryX - 5, sumY - 5, 90, 70); // Taller for more info if needed
+    doc.setFillColor(248, 250, 252);
+    doc.rect(summaryX, sumY, summaryWidth, 90, 'F');
+    doc.rect(summaryX, sumY, summaryWidth, 90, 'S');
 
-    doc.setFontSize(9);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 58, 138);
+    doc.text('RESUMEN GENERAL', 105, sumY - 5, { align: 'center' }); // Label above box
+
+    let currentY = sumY + 10;
     const drawRow = (label: string, value: number, bold = false) => {
+        doc.setFontSize(10);
         doc.setFont('helvetica', bold ? 'bold' : 'normal');
         doc.setTextColor(0);
-        doc.text(label, summaryX, sumY);
-        doc.text(fmt(value), summaryX + 80, sumY, { align: 'right' });
-        sumY += 6;
+        doc.text(label, summaryX + 5, currentY);
+        doc.text(fmt(value), summaryX + summaryWidth - 5, currentY, { align: 'right' });
+        currentY += 8;
     };
 
     drawRow('Materiales:', totalMateriales);
     drawRow('Mano de Obra:', totalManoObra);
     drawRow('Equipos:', totalEquipos);
 
-    doc.setDrawColor(150);
-    doc.line(summaryX, sumY - 2, summaryX + 80, sumY - 2);
-    sumY += 2;
+    currentY += 2;
+    doc.setDrawColor(200);
+    doc.line(summaryX + 5, currentY - 4, summaryX + summaryWidth - 5, currentY - 4);
 
     drawRow('COSTO DIRECTO:', costoDirectoTotal, true);
-    sumY += 2;
+    currentY += 2;
 
     drawRow(`Administración (${config.administracion}%):`, adminTotal);
-    // Utility calculation note: logic might vary, sticking to simple cascade
     drawRow(`Utilidad (${config.utilidad}%):`, utilidadTotal);
 
-    doc.line(summaryX, sumY - 2, summaryX + 80, sumY - 2);
-    sumY += 2;
+    currentY += 2;
+    doc.line(summaryX + 5, currentY - 4, summaryX + summaryWidth - 5, currentY - 4);
 
     drawRow('SUBTOTAL (Sin IVA):', subtotal, true);
     drawRow(`IVA (${config.iva}%):`, ivaTotal);
 
-    sumY += 4;
+    currentY += 6;
     doc.setFillColor(30, 58, 138); // Blue 900
-    doc.rect(summaryX - 5, sumY - 6, 90, 12, 'F');
+    doc.rect(summaryX, currentY - 8, summaryWidth, 14, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL (USD):', summaryX, sumY + 1);
-    doc.text(fmt(granTotal), summaryX + 80, sumY + 1, { align: 'right' });
+    doc.text('TOTAL GENERAL (USD)', summaryX + 5, currentY + 1);
+    doc.text(fmt(granTotal), summaryX + summaryWidth - 5, currentY + 1, { align: 'right' });
 
-    // 7. FOOTER
+    // 8. FOOTER
     const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
@@ -205,8 +401,8 @@ export const generarPDFPresupuesto = async (proyecto: Proyecto) => {
         doc.text(`Generado el: ${now} - Tasa Ref: ${config.tasaCambio} Bs/$`, 14, 285);
     }
 
-    // 8. SAVE
-    const filename = `Presupuesto_${(proyecto.nombre || 'Proyecto').replace(/\s+/g, '_')}.pdf`;
+    // 9. SAVE
+    const filename = `Presupuesto_${(proyecto.nombre || 'APU_Project').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
 
     try {
         if (Capacitor.isNativePlatform()) {

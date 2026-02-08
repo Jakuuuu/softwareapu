@@ -44,8 +44,6 @@ export const ConfiguracionProyecto = () => {
     const currentWorkType = watch('tipoObra');
 
     const onSubmit = (data: FormValues) => {
-        // Create new project structure
-        // Note: In a real app we might merge with existing config to preserve other fields like pension settings
         const defaultConfig = proyectoActual?.config || {
             monedaPrincipal: 'USD',
             fuenteTasa: 'BCV_OFICIAL',
@@ -73,7 +71,7 @@ export const ConfiguracionProyecto = () => {
                 utilidad: Number(data.utilidad),
                 administracion: Number(data.administracion),
                 fcas: {
-                    ...defaultConfig.fcas, // Preserve immutable defaults
+                    ...defaultConfig.fcas,
                     factorTotal: Number(data.fcasFactor),
                     diasFeriados: Number(data.diasFeriados),
                     diasUtilidades: Number(data.diasUtilidades),
@@ -96,220 +94,237 @@ export const ConfiguracionProyecto = () => {
     ];
 
     return (
-        <div className="flex flex-col h-full min-h-screen bg-background-light text-slate-900">
-            {/* Header */}
-            <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200">
-                <header className="flex items-center justify-between p-4 max-w-2xl mx-auto w-full">
-                    <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 text-primary shadow-sm ring-1 ring-black/5">
-                        <span className="material-symbols-outlined">edit_document</span>
+        <div className="min-h-screen w-full bg-slate-50 flex flex-col items-center relative overflow-hidden">
+            {/* Background Decorations */}
+            <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-br from-slate-900 to-blue-900 -z-0 rounded-b-[3rem] shadow-2xl"></div>
+            <div className="absolute top-10 right-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+            <div className="absolute top-20 left-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl"></div>
+
+            {/* Main Container */}
+            <div className="z-10 w-full max-w-4xl px-4 py-8 flex flex-col items-center">
+
+                {/* Branding Header */}
+                <div className="text-center mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <div className="inline-flex items-center justify-center p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl mb-4">
+                        <span className="material-symbols-outlined text-4xl text-blue-200">calculate</span>
                     </div>
-                    <h1 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center text-slate-900">
-                        Configuración <span className="text-slate-400 font-normal">del Proyecto</span>
+                    <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-sm">
+                        APU Software
                     </h1>
-                    <div className="w-10"></div>
-                </header>
-            </div>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col p-4 gap-6 pb-28 max-w-2xl mx-auto w-full">
-
-                {/* Identification */}
-                <section className="space-y-4">
-                    <div className="flex items-center gap-2 px-1">
-                        <span className="material-symbols-outlined text-primary text-[20px]">assignment</span>
-                        <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">Identificación</h2>
-                    </div>
-                    <div className="space-y-4">
-                        <label className="block">
-                            <span className="text-sm font-medium text-slate-700 mb-1.5 block">Nombre del Proyecto</span>
-                            <input
-                                {...register('nombre', { required: true })}
-                                className="w-full rounded-lg border-gray-300 bg-white focus:border-primary focus:ring-primary h-12 px-4 shadow-sm text-base transition-shadow"
-                                placeholder="Ej. Residencial Los Pinos"
-                            />
-                            {errors.nombre && <span className="text-xs text-red-500">Requerido</span>}
-                        </label>
-
-                        <label className="block">
-                            <span className="text-sm font-medium text-slate-700 mb-1.5 block">Ubicación</span>
-                            <div className="relative flex items-center">
-                                <input
-                                    {...register('ubicacion', { required: true })}
-                                    className="w-full rounded-lg border-gray-300 bg-white focus:border-primary focus:ring-primary h-12 pl-4 pr-12 shadow-sm text-base transition-shadow"
-                                    placeholder="Ciudad, Estado"
-                                />
-                                <span className="absolute right-2 p-2 text-primary">
-                                    <span className="material-symbols-outlined">location_on</span>
-                                </span>
-                            </div>
-                        </label>
-
-                        <label className="block">
-                            <span className="text-sm font-medium text-slate-700 mb-1.5 block">Propietario / Cliente</span>
-                            <input
-                                {...register('propietario', { required: true })}
-                                className="w-full rounded-lg border-gray-300 bg-white focus:border-primary focus:ring-primary h-12 px-4 shadow-sm text-base transition-shadow"
-                                placeholder="Nombre del Cliente"
-                            />
-                        </label>
-                    </div>
-                </section>
-
-                {/* Type of Work */}
-                <section className="space-y-4">
-                    <div className="flex items-center gap-2 px-1">
-                        <span className="material-symbols-outlined text-primary text-[20px]">category</span>
-                        <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">Tipo de Obra</h2>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        {workTypes.map((type) => (
-                            <div
-                                key={type.id}
-                                onClick={() => setValue('tipoObra', type.id)}
-                                className={`
-                                    cursor-pointer relative flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all h-32 shadow-sm
-                                    ${currentWorkType === type.id
-                                        ? 'border-primary bg-blue-50/50 shadow-md scale-[1.02]'
-                                        : 'border-slate-200 bg-white hover:border-primary/30 hover:shadow-md'
-                                    }
-                                `}
-                            >
-                                <div className={`p-2 rounded-full mb-2 ${currentWorkType === type.id ? 'bg-primary/10' : 'bg-slate-100'}`}>
-                                    <span className={`material-symbols-outlined text-3xl transition-colors ${currentWorkType === type.id ? 'text-primary' : 'text-slate-400'}`}>
-                                        {type.icon}
-                                    </span>
-                                </div>
-                                <span className={`text-sm font-bold text-center ${currentWorkType === type.id ? 'text-primary' : 'text-slate-600'}`}>
-                                    {type.label}
-                                </span>
-                                {currentWorkType === type.id && (
-                                    <div className="absolute top-2 right-2 text-primary bg-white rounded-full flex">
-                                        <span className="material-symbols-outlined text-[20px] filled">check_circle</span>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                    {/* Custom Work Type Input */}
-                    {currentWorkType === 'OTRO' && (
-                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                            <label className="block">
-                                <span className="text-sm font-medium text-slate-700 mb-1.5 block">Especifique el Tipo de Obra</span>
-                                <input
-                                    {...register('tipoObraOtro', { required: currentWorkType === 'OTRO' })}
-                                    className="w-full rounded-lg border-primary bg-blue-50/20 focus:border-primary focus:ring-primary h-12 px-4 shadow-sm text-base transition-shadow"
-                                    placeholder="Ej. Remodelación de Interiores"
-                                    autoFocus
-                                />
-                                {errors.tipoObraOtro && <span className="text-xs text-red-500">Requerido</span>}
-                            </label>
-                        </div>
-                    )}
-                </section>
-
-                {/* Economy & FCAS */}
-                <section className="space-y-4">
-                    <div className="flex items-center gap-2 px-1">
-                        <span className="material-symbols-outlined text-primary text-[20px]">currency_exchange</span>
-                        <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">Economía & FCAS</h2>
-                    </div>
-                    <div className="rounded-xl bg-white p-5 border border-gray-200 shadow-sm space-y-5">
-
-                        {/* Exchange Rate */}
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                            <label className="block">
-                                <span className="text-sm font-bold text-blue-900 mb-1.5 block">Tasa de Cambio (Bs/USD)</span>
-                                <div className="relative flex items-center">
-                                    <input
-                                        {...register('tasaCambio', { required: true, min: 0 })}
-                                        type="number"
-                                        step="0.01"
-                                        className="w-full rounded-lg border-blue-200 bg-white focus:border-blue-500 focus:ring-blue-500 h-11 pl-3 pr-12 font-bold text-blue-900 text-right transition-colors shadow-sm"
-                                        placeholder="0.00"
-                                    />
-                                    <span className="absolute right-3 text-blue-400 font-bold text-sm">Bs</span>
-                                </div>
-                            </label>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-                            <InputPercentage label="IVA" name="iva" register={register} />
-                            <InputPercentage label="Utilidad" name="utilidad" register={register} />
-                            <InputPercentage label="Administración" name="administracion" register={register} />
-                            <InputPercentage label="FCAS Total" name="fcasFactor" register={register} />
-                        </div>
-
-                        {/* FCAS Breakdown (Simplified) */}
-                        <div className="border-t border-gray-100 pt-4">
-                            <h3 className="text-xs font-bold text-slate-400 mb-3 uppercase">Detalles FCAS</h3>
-                            <div className="grid grid-cols-3 gap-3">
-                                <InputNumber label="Días Feriados" name="diasFeriados" register={register} />
-                                <InputNumber label="Días Utilid." name="diasUtilidades" register={register} />
-                                <InputNumber label="Días Vacac." name="diasVacaciones" register={register} />
-                            </div>
-                            <div className="mt-4 pt-2 border-t border-gray-100 flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-semibold text-slate-700">Ley de Pensiones 2025</p>
-                                    <p className="text-xs text-slate-500">Incluir 9% en estructura de costos</p>
-                                </div>
-                                <div className="text-xs font-bold text-primary bg-blue-50 px-2 py-1 rounded">
-                                    Automático
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Footer Action */}
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-200 z-40 rounded-b-2xl">
-                    <div className="max-w-2xl mx-auto">
-                        <button
-                            type="submit"
-                            className="w-full bg-primary hover:bg-primary-dark text-white font-bold h-14 rounded-xl shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-lg group bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-                        >
-                            Continuar al Presupuesto
-                            <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                        </button>
-                    </div>
+                    <p className="text-blue-200 mt-2 text-lg font-medium tracking-wide">
+                        Control Integral de Obras
+                    </p>
                 </div>
 
-            </form>
+                {/* Configuration Card */}
+                <form
+                    onSubmit={handleSubmit(onSubmit)}
+                    className="w-full bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150"
+                >
+                    {/* Card Header */}
+                    <div className="bg-slate-50 border-b border-slate-100 p-6 md:p-8">
+                        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3">
+                            <span className="flex size-8 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-600/30">
+                                <span className="material-symbols-outlined text-lg">settings</span>
+                            </span>
+                            Configuración Inicial del Proyecto
+                        </h2>
+                        <p className="text-slate-500 mt-1 ml-11 text-sm">
+                            Complete los datos básicos para iniciar su presupuesto.
+                        </p>
+                    </div>
+
+                    <div className="p-6 md:p-8 space-y-10">
+
+                        {/* SECTION 1: IDENTIFICATION */}
+                        <section className="space-y-5">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                <span className="w-8 h-[1px] bg-slate-300"></span> Identificación
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-1.5 md:col-span-2">
+                                    <label className="text-sm font-semibold text-slate-700">Nombre del Proyecto</label>
+                                    <input
+                                        {...register('nombre', { required: true })}
+                                        className="w-full h-12 px-4 rounded-xl bg-slate-50 border-slate-200 border focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-medium placeholder:text-slate-400"
+                                        placeholder="Ej. Residencias Vista Al Mar"
+                                    />
+                                    {errors.nombre && <span className="text-xs text-red-500 font-medium ml-1">Requerido</span>}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-semibold text-slate-700">Ubicación</label>
+                                    <div className="relative">
+                                        <input
+                                            {...register('ubicacion', { required: true })}
+                                            className="w-full h-12 pl-4 pr-10 rounded-xl bg-slate-50 border-slate-200 border focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-medium placeholder:text-slate-400"
+                                            placeholder="Ciudad, Estado"
+                                        />
+                                        <span className="material-symbols-outlined absolute right-3 top-3 text-slate-400">location_on</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-semibold text-slate-700">Cliente / Propietario</label>
+                                    <div className="relative">
+                                        <input
+                                            {...register('propietario', { required: true })}
+                                            className="w-full h-12 pl-4 pr-10 rounded-xl bg-slate-50 border-slate-200 border focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-medium placeholder:text-slate-400"
+                                            placeholder="Nombre del Cliente"
+                                        />
+                                        <span className="material-symbols-outlined absolute right-3 top-3 text-slate-400">person</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* SECTION 2: TIPO DE OBRA */}
+                        <section className="space-y-5">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                <span className="w-8 h-[1px] bg-slate-300"></span> Tipo de Obra
+                            </h3>
+
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                {workTypes.map((type) => (
+                                    <div
+                                        key={type.id}
+                                        onClick={() => setValue('tipoObra', type.id)}
+                                        className={`
+                                            cursor-pointer group relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all duration-200 h-28
+                                            ${currentWorkType === type.id
+                                                ? 'border-blue-600 bg-blue-50/50 shadow-md ring-1 ring-blue-600/20'
+                                                : 'border-slate-100 bg-white hover:border-blue-200 hover:shadow-lg hover:-translate-y-1'
+                                            }
+                                        `}
+                                    >
+                                        <span className={`material-symbols-outlined text-3xl mb-2 transition-colors ${currentWorkType === type.id ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500'}`}>
+                                            {type.icon}
+                                        </span>
+                                        <span className={`text-xs font-bold text-center ${currentWorkType === type.id ? 'text-blue-700' : 'text-slate-500'}`}>
+                                            {type.label}
+                                        </span>
+                                        {currentWorkType === type.id && (
+                                            <div className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full p-0.5 shadow-sm">
+                                                <span className="material-symbols-outlined text-sm block">check</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            {currentWorkType === 'OTRO' && (
+                                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <input
+                                        {...register('tipoObraOtro', { required: currentWorkType === 'OTRO' })}
+                                        className="w-full h-12 px-4 rounded-xl bg-blue-50/50 border-blue-200 border focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-medium placeholder:text-blue-300 text-blue-900"
+                                        placeholder="Especifique el tipo de obra..."
+                                        autoFocus
+                                    />
+                                </div>
+                            )}
+                        </section>
+
+                        {/* SECTION 3: ECONOMY */}
+                        <section className="space-y-5">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                <span className="w-8 h-[1px] bg-slate-300"></span> Datos Económicos
+                            </h3>
+
+                            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                                    {/* Main Rate */}
+                                    <div className="md:col-span-2 bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+                                        <div className="size-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                                            <span className="material-symbols-outlined text-green-600">currency_exchange</span>
+                                        </div>
+                                        <div className="flex-1">
+                                            <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Tasa de Cambio (Bs/USD)</label>
+                                            <input
+                                                {...register('tasaCambio', { required: true, min: 0 })}
+                                                type="number"
+                                                step="0.01"
+                                                className="w-full text-2xl font-black text-slate-800 bg-transparent outline-none placeholder:text-slate-300"
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Percentages Grid */}
+                                    <InputPercentage label="I.V.A." name="iva" register={register} icon="percent" />
+                                    <InputPercentage label="Utilidad" name="utilidad" register={register} icon="trending_up" />
+                                    <InputPercentage label="Gastos Admin." name="administracion" register={register} icon="business_center" />
+                                    <InputPercentage label="FCAS Total" name="fcasFactor" register={register} icon="group" />
+
+                                </div>
+
+                                {/* FCAS Details Toggle/Section */}
+                                <div className="mt-6 pt-6 border-t border-slate-200/60">
+                                    <h4 className="text-xs font-bold text-slate-400 mb-4">DETALLES FCAS</h4>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <InputNumber label="Días Feriados" name="diasFeriados" register={register} />
+                                        <InputNumber label="Días Utilid." name="diasUtilidades" register={register} />
+                                        <InputNumber label="Días Vacac." name="diasVacaciones" register={register} />
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                    </div>
+
+                    {/* Footer / Submit */}
+                    <div className="bg-slate-50 p-6 md:p-8 border-t border-slate-100 flex flex-col md:flex-row items-center gap-4 justify-between">
+                        <p className="text-xs text-slate-400 text-center md:text-left">
+                            Al continuar, se creará un nuevo archivo de proyecto local.
+                        </p>
+                        <button
+                            type="submit"
+                            className="w-full md:w-auto px-8 h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                        >
+                            Iniciar Proyecto
+                            <span className="material-symbols-outlined">arrow_forward</span>
+                        </button>
+                    </div>
+                </form>
+
+                {/* Footer Brand */}
+                <div className="mt-8 text-center text-slate-400 text-sm">
+                    &copy; {new Date().getFullYear()} APU Software. Todos los derechos reservados.
+                </div>
+            </div>
         </div>
     );
 };
 
-// Helper Component for Percentages
-const InputPercentage = ({ label, name, register }: { label: string, name: keyof FormValues, register: UseFormRegister<FormValues> }) => (
-    <div className="flex flex-col group">
-        <div className="flex items-center gap-1 mb-1.5 ml-1">
-            <label className="text-xs font-semibold text-slate-500 uppercase group-focus-within:text-primary transition-colors">{label}</label>
-        </div>
-        <div className="relative flex items-center">
+// Helper Components
+const InputPercentage = ({ label, name, register, icon }: { label: string, name: keyof FormValues, register: UseFormRegister<FormValues>, icon: string }) => (
+    <div className="bg-white p-3 rounded-xl border border-slate-100 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all shadow-sm">
+        <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1">
+            <span className="material-symbols-outlined text-[16px]">{icon}</span>
+            {label}
+        </label>
+        <div className="flex items-center">
             <input
                 {...register(name, { required: true, min: 0 })}
                 type="number"
                 step="0.1"
-                className="w-full rounded-lg border-gray-300 bg-gray-50 focus:bg-white focus:border-primary focus:ring-primary h-11 pl-3 pr-8 font-semibold text-slate-800 text-right transition-colors shadow-sm"
+                className="w-full font-bold text-slate-700 outline-none text-lg"
                 placeholder="0"
             />
-            <span className="absolute right-3 text-gray-400 font-medium text-sm">%</span>
+            <span className="text-slate-400 font-bold ml-1">%</span>
         </div>
     </div>
 );
 
-// Helper Component for Numbers
 const InputNumber = ({ label, name, register }: { label: string, name: keyof FormValues, register: UseFormRegister<FormValues> }) => (
-    <div className="flex flex-col group">
-        <div className="flex items-center gap-1 mb-1.5 ml-1">
-            <label className="text-xs font-semibold text-slate-500 uppercase group-focus-within:text-primary transition-colors">{label}</label>
-        </div>
-        <div className="relative flex items-center">
-            <input
-                {...register(name, { required: true, min: 0 })}
-                type="number"
-                step="1"
-                className="w-full rounded-lg border-gray-300 bg-gray-50 focus:bg-white focus:border-primary focus:ring-primary h-9 px-2 font-medium text-slate-800 text-right transition-colors shadow-sm text-sm"
-                placeholder="0"
-            />
-        </div>
+    <div className="bg-white p-3 rounded-xl border border-slate-100 focus-within:border-blue-500 transition-all shadow-sm">
+        <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">{label}</label>
+        <input
+            {...register(name, { required: true, min: 0 })}
+            type="number"
+            step="1"
+            className="w-full font-bold text-slate-700 outline-none text-base"
+            placeholder="0"
+        />
     </div>
 );

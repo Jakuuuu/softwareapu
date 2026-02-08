@@ -6,14 +6,12 @@ import { FCASCalculator } from './components/FCASCalculator';
 import { AppShell } from './components/layout/AppShell';
 import { ResourceSummary } from './components/ResourceSummary';
 import { generarPDFPresupuesto } from './utils/exportPDF';
-import { SplashScreen } from './components/SplashScreen';
 import { ProjectSnapshots } from './components/ProjectSnapshots';
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 
 function App() {
   const { proyectoActual, partidaEditando, resetProyecto, setProyecto, currentView } = useProyectoStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showSplash, setShowSplash] = useState(true);
 
   const handleExportJSON = () => {
     if (!proyectoActual) return;
@@ -34,7 +32,6 @@ function App() {
     reader.onload = (e) => {
       try {
         const json = JSON.parse(e.target?.result as string);
-        // Simple validation or direct set
         if (json.partidas) {
           setProyecto(json);
           alert("Proyecto importado correctamente.");
@@ -47,7 +44,6 @@ function App() {
       }
     };
     reader.readAsText(file);
-    // Reset input
     event.target.value = '';
   };
 
@@ -57,25 +53,21 @@ function App() {
     }
   };
 
-  const renderContent = () => {
-    if (!proyectoActual) {
-      return (
-        <div className="max-w-3xl mx-auto">
-          <ConfiguracionProyecto />
-          <div className="mt-8 border-t pt-8">
-            <FCASCalculator />
-          </div>
-        </div>
-      );
-    }
+  // 1. Landing / Config Screen (Full Screen)
+  // If no project is loaded, strictly show the Landing Config
+  if (!proyectoActual) {
+    return <ConfiguracionProyecto />;
+  }
 
+  // 2. Main App Logic
+  const renderContent = () => {
     if (partidaEditando) {
       return <EditorAPU />;
     }
 
     switch (currentView) {
       case 'presupuesto':
-      case 'dashboard': // Fallback to budget for now
+      case 'dashboard':
         return (
           <div className="max-w-6xl mx-auto space-y-6">
             <ListaPartidas
@@ -93,7 +85,10 @@ function App() {
       case 'versiones':
         return <div className="max-w-4xl mx-auto h-[calc(100vh-140px)]"><ProjectSnapshots /></div>;
       case 'configuracion':
-        return <div className="max-w-3xl mx-auto"><ConfiguracionProyecto /></div>;
+        // Reuse the component but ensure it fits within the shell layout
+        // Note: The new design is full screen, so it might look a bit different inside
+        // a container, but it's responsive so it should be fine.
+        return <div className="max-w-4xl mx-auto"><ConfiguracionProyecto /></div>;
       default:
         return <ListaPartidas
           onImport={() => fileInputRef.current?.click()}
@@ -101,10 +96,6 @@ function App() {
         />;
     }
   };
-
-  if (showSplash) {
-    return <SplashScreen onComplete={() => setShowSplash(false)} />;
-  }
 
   return (
     <AppShell
@@ -119,6 +110,7 @@ function App() {
         style={{ display: 'none' }}
         accept=".json"
       />
+
       {renderContent()}
 
       {/* Reset Button (Development/Emergency) - Only show on Dashboard/Presupuesto to avoid clutter */}

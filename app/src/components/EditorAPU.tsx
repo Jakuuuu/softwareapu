@@ -61,10 +61,10 @@ export const EditorAPU = () => {
             {/* Main Scrollable */}
             <main className="flex-1 overflow-y-auto pb-56 no-scrollbar bg-slate-50/50">
                 <div className="max-w-4xl mx-auto w-full p-4 sm:p-6">
-                    {/* Performance Card */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    {/* Performance & Quantity Card */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                         <div className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm group focus-within:ring-2 focus-within:ring-primary/20 transition-shadow">
-                            <label className="block mb-1.5 text-xs font-bold uppercase text-slate-400 tracking-wider group-focus-within:text-primary transition-colors">Capítulo / Etapa</label>
+                            <label className="block mb-1.5 text-xs font-bold uppercase text-slate-400 tracking-wider group-focus-within:text-primary transition-colors">Capítulo</label>
                             <div className="flex items-center gap-2">
                                 <span className="material-symbols-outlined text-slate-300">folder</span>
                                 <input
@@ -77,7 +77,21 @@ export const EditorAPU = () => {
                             </div>
                         </div>
                         <div className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm group focus-within:ring-2 focus-within:ring-primary/20 transition-shadow">
-                            <label className="block mb-1.5 text-xs font-bold uppercase text-slate-400 tracking-wider group-focus-within:text-primary transition-colors">Rendimiento Diario</label>
+                            <label className="block mb-1.5 text-xs font-bold uppercase text-slate-400 tracking-wider group-focus-within:text-primary transition-colors">Cantidad Total</label>
+                            <div className="relative flex items-center gap-2">
+                                <span className="material-symbols-outlined text-slate-300">straighten</span>
+                                <input
+                                    className="block w-full border-0 p-0 text-slate-900 placeholder:text-gray-300 focus:ring-0 text-xl font-bold font-mono"
+                                    type="number"
+                                    value={partida.cantidad || ''}
+                                    onChange={(e) => actualizarPartida(partida.id, { cantidad: parseFloat(e.target.value) || 0 })}
+                                    placeholder="0.00"
+                                />
+                                <span className="text-xs text-slate-400 font-bold bg-slate-100 px-2 py-1 rounded-md">{partida.unidadMedida}</span>
+                            </div>
+                        </div>
+                        <div className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm group focus-within:ring-2 focus-within:ring-primary/20 transition-shadow">
+                            <label className="block mb-1.5 text-xs font-bold uppercase text-slate-400 tracking-wider group-focus-within:text-primary transition-colors">Rendimiento</label>
                             <div className="relative flex items-center gap-2">
                                 <span className="material-symbols-outlined text-slate-300">timer</span>
                                 <input
@@ -87,7 +101,7 @@ export const EditorAPU = () => {
                                     onChange={handleRendimientoChange}
                                     placeholder="0.00"
                                 />
-                                <span className="text-xs text-slate-400 font-bold bg-slate-100 px-2 py-1 rounded-md">{partida.unidadMedida}/día</span>
+                                <span className="text-xs text-slate-400 font-bold bg-slate-100 px-2 py-1 rounded-md">/día</span>
                             </div>
                         </div>
                     </div>
@@ -156,18 +170,23 @@ export const EditorAPU = () => {
                 <div className="bg-white border-t border-gray-200 px-6 pt-5 pb-8 rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] max-w-4xl mx-auto ring-1 ring-black/5">
                     <div className="flex flex-col gap-5">
                         <div className="flex justify-between items-end">
+                            {/* Unit Price */}
                             <div className="flex flex-col gap-1">
-                                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Precio Unitario Total</span>
+                                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Precio Unitario</span>
                                 <div className="flex items-baseline gap-2">
-                                    <span className="text-4xl font-black font-mono text-slate-900 tracking-tight">{fmtUsd(partida.precioUnitarioUsd)}</span>
-                                    <span className="text-base font-bold text-slate-400">/ {partida.unidadMedida}</span>
+                                    <span className="text-3xl font-black font-mono text-slate-900 tracking-tight">{fmtUsd(partida.precioUnitarioUsd)}</span>
+                                    <span className="text-sm font-bold text-slate-400">/ {partida.unidadMedida}</span>
                                 </div>
-                                <span className="text-sm font-medium text-slate-500">{fmtBs(partida.precioUnitarioBs)}</span>
+                                <span className="text-xs font-medium text-slate-500">{fmtBs(partida.precioUnitarioBs)}</span>
                             </div>
-                            <div className="flex flex-col items-end gap-1.5 mb-1 bg-slate-50 p-3 rounded-xl border border-gray-100 min-w-[180px]">
-                                <SummaryItem color="bg-blue-500" label="Materiales" valBs={partida.costoMaterialesBs} valUsd={partida.costoMaterialesUsd} />
-                                <SummaryItem color="bg-amber-500" label="Mano de Obra" valBs={partida.costoManoObraBs} valUsd={partida.costoManoObraUsd} />
-                                <SummaryItem color="bg-emerald-500" label="Equipos" valBs={partida.costoEquiposBs} valUsd={partida.costoEquiposUsd} />
+
+                            {/* Total Price (New) */}
+                            <div className="flex flex-col gap-1 items-end border-l pl-6 border-gray-100">
+                                <span className="text-xs font-bold uppercase tracking-widest text-primary">Precio Total ({partida.cantidad} {partida.unidadMedida})</span>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-4xl font-black font-mono text-primary tracking-tight">{fmtUsd(partida.precioTotalUsd)}</span>
+                                </div>
+                                <span className="text-sm font-medium text-slate-500">{fmtBs(partida.precioTotalBs)}</span>
                             </div>
                         </div>
                         <button onClick={handleClose} className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
@@ -181,18 +200,4 @@ export const EditorAPU = () => {
     );
 };
 
-const SummaryItem = ({ color, label, valBs, valUsd }: { color: string, label: string, valBs: number, valUsd: number }) => {
-    const fmtUsd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format;
-    return (
-        <div className="text-xs font-medium text-slate-600 flex items-center justify-between w-full gap-4">
-            <div className="flex items-center gap-2">
-                <span className={`size-2 rounded-full ${color}`}></span>
-                {label}
-            </div>
-            <div className="text-right">
-                <span className="font-mono font-bold block">{fmtUsd(valUsd)}</span>
-                <span className="text-[10px] text-slate-400 font-mono block">{new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES' }).format(valBs)}</span>
-            </div>
-        </div>
-    );
-};
+
