@@ -2,7 +2,7 @@ import { useProyectoStore } from './store/useProyectoStore';
 import { ConfiguracionProyecto } from './components/ConfiguracionProyecto';
 import { ListaPartidas } from './components/ListaPartidas';
 import { EditorAPU } from './components/EditorAPU';
-import { FCASCalculator } from './components/FCASCalculator';
+
 import { AppShell } from './components/layout/AppShell';
 import { ResourceSummary } from './components/ResourceSummary';
 import { generarPDFPresupuesto } from './utils/exportPDF';
